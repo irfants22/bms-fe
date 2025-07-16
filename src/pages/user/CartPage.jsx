@@ -7,24 +7,27 @@ import {
   formatRupiah,
   formatWeight,
 } from "../../utils/helper";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 
 function CartPage() {
   const [cartItems, setCartItems] = useState([]);
   const [loading, setLoading] = useState(false);
   const [process, setProcess] = useState(false);
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+
+    if (!token) {
+      navigate("/auth/login");
+      setTimeout(() => alert("Anda harus login terlebih dahulu."), 500);
+      return;
+    }
+  }, []);
 
   const fetchCartItems = async () => {
     setLoading(true);
     try {
-      const token = localStorage.getItem("token");
-
-      if (!token) {
-        alert("Anda harus login terlebih dahulu.");
-        setLoading(false);
-        return;
-      }
-
       const { data } = await axiosInstance.get("/api/carts", {
         headers: {
           Authorization: `Bearer ${token}`,
