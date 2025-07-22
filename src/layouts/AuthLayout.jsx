@@ -1,7 +1,7 @@
 import { User } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link, Outlet } from "react-router-dom";
 
-function AuthLayout({ children }) {
+function AuthLayout() {
   return (
     <div className="min-h-screen bg-gray-100 flex flex-col">
       {/* Header */}
@@ -36,7 +36,7 @@ function AuthLayout({ children }) {
 
       {/* Main Content */}
       <main className="flex-1 flex items-center justify-center px-4 py-8">
-        {children}
+        <Outlet />
       </main>
     </div>
   );

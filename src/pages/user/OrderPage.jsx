@@ -1,28 +1,30 @@
 import { useEffect, useState } from "react";
 import { axiosInstance } from "../../lib/axios";
 import {
-  calculateTotalPrice,
   formatRupiah,
   formatWeight,
   getShippingCost,
+  calculateTotalPrice,
+  getToken,
 } from "../../utils/helper";
-import UserLayout from "../../layouts/UserLayout";
+import ProtectedPageUser from "../protected/ProtectedPageUser";
+import { useUnpaidOrders } from "../../context/UnpaidOrdersContext";
+import Loader from "../../components/Loader";
+import { useNavigate } from "react-router-dom";
 
 function OrderPage() {
+  const token = getToken();
+  const serviceFee = 2000;
+  const navigate = useNavigate();
   const [user, setUser] = useState({});
+  const [payload, setPayload] = useState({});
   const [cartItems, setCartItems] = useState([]);
   const [shippingCost, setShippingCost] = useState(0);
-  const [payload, setPayload] = useState({});
-  const [loading, setLoading] = useState(false);
-  const serviceFee = 2000;
+  const [loadingItems, setLoadingItems] = useState(false);
+  const { addUnpaidOrder } = useUnpaidOrders();
 
   const fetchUser = async () => {
     try {
-      const token = localStorage.getItem("token");
-      if (!token) {
-        alert("Anda harus login terlebih dahulu.");
-        return;
-      }
       const { data } = await axiosInstance.get("/api/users/me", {
         headers: {
           Authorization: `Bearer ${token}`,
@@ -36,16 +38,14 @@ function OrderPage() {
   };
 
   useEffect(() => {
-    fetchUser();
-  }, []);
+    if (token) {
+      fetchUser();
+    }
+  }, [token]);
 
   const fetchCartItems = async () => {
+    setLoadingItems(true);
     try {
-      const token = localStorage.getItem("token");
-      if (!token) {
-        alert("Anda harus login terlebih dahulu.");
-        return;
-      }
       const { data } = await axiosInstance.get("/api/carts", {
         headers: {
           Authorization: `Bearer ${token}`,
@@ -55,12 +55,16 @@ function OrderPage() {
     } catch (error) {
       console.error("Gagal memuat keranjang belanja:", error);
       console.log("Terjadi kesalahan saat mengambil data keranjang.");
+    } finally {
+      setLoadingItems(false);
     }
   };
 
   useEffect(() => {
-    fetchCartItems();
-  }, []);
+    if (token) {
+      fetchCartItems();
+    }
+  }, [token]);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -73,6 +77,7 @@ function OrderPage() {
       setShippingCost(getShippingCost(value));
       return;
     }
+
     setPayload((prev) => ({
       ...prev,
       [name]: value,
@@ -80,14 +85,7 @@ function OrderPage() {
   };
 
   const fetchCreateOrder = async () => {
-    setLoading(true);
     try {
-      const token = localStorage.getItem("token");
-      if (!token) {
-        alert("Anda harus login terlebih dahulu.");
-        setLoading(false);
-        return;
-      }
       const { address, notes, other_costs } = payload;
       if (
         !address ||
@@ -98,6 +96,9 @@ function OrderPage() {
         alert("Mohon lengkapi semua data sebelum mengirim.");
         return;
       }
+      if (shippingCost === 0) {
+        return alert("Pilih kota pengiriman terlebih dahulu.");
+      }
       const { data } = await axiosInstance.post("/api/orders", payload, {
         headers: {
           "Content-Type": "application/json",
@@ -105,14 +106,17 @@ function OrderPage() {
         },
       });
 
-      const { snap_token } = data.data;
+      const { order_id, snap_token } = data.data;
+
+      addUnpaidOrder({ order_id, snap_token });
 
       // Panggil Midtrans Snap UI
       window.snap.pay(snap_token, {
         onSuccess: function (result) {
+          removeUnpaidOrder(order_id);
           console.log("Pembayaran berhasil", result);
           alert("Pembayaran berhasil!");
-          // redirect ke halaman sukses jika mau
+          // redirect ke halaman sukses jika perlu
         },
         onPending: function (result) {
           console.log("Menunggu pembayaran", result);
@@ -123,19 +127,20 @@ function OrderPage() {
           alert("Pembayaran gagal!");
         },
         onClose: function () {
+          navigate("/my-order");
           alert("Kamu menutup pop-up tanpa menyelesaikan pembayaran.");
         },
       });
     } catch (error) {
       console.error("Gagal membuat pesanan:", error);
       console.log("Terjadi kesalahan saat membuat pesanan.");
-    } finally {
-      setLoading(false);
     }
   };
 
   const handleSubmit = () => {
-    fetchCreateOrder();
+    if (token) {
+      fetchCreateOrder();
+    }
   };
 
   useEffect(() => {
@@ -154,7 +159,7 @@ function OrderPage() {
   }, []);
 
   return (
-    <UserLayout>
+    <ProtectedPageUser>
       <div className="container mx-auto px-4 py-8">
         <h1 className="text-2xl font-bold text-gray-800 mb-8">Buat Pesanan</h1>
 
@@ -236,39 +241,48 @@ function OrderPage() {
               </thead>
               <tbody>
                 {/* Cart Items */}
-                {cartItems.map((item) => (
-                  <tr key={item.id} className="border-b border-gray-100">
-                    <td className="py-4 px-2">
-                      <div className="w-16 h-16 bg-gray-200 rounded-md flex items-center justify-center">
-                        <img
-                          alt="Gambar Produk"
-                          src={item.product?.image}
-                          className="w-full h-full bg-cover"
-                        ></img>
-                      </div>
-                    </td>
-                    <td className="py-4 px-2">
-                      <div className="font-medium text-gray-800 capitalize">
-                        {item.product?.name}
-                      </div>
-                      <div className="text-sm text-gray-600">
-                        {formatWeight(item.product?.weight)}
-                      </div>
-                    </td>
-                    <td className="py-4 px-2"></td>
-                    <td className="py-4 px-2 text-center">
-                      {formatRupiah(item.price)}
-                    </td>
-                    <td className="py-4 px-2 text-center">{item.quantity}</td>
-                    <td className="py-4 px-2 text-right font-medium">
-                      {formatRupiah(item.price * item.quantity)}
+                {loadingItems ? (
+                  <tr>
+                    <td colSpan={6} className="text-center">
+                      <Loader>Memuat informasi produk...</Loader>
                     </td>
                   </tr>
-                ))}
+                ) : (
+                  cartItems.map((item) => (
+                    <tr key={item.id} className="border-b border-gray-100">
+                      <td className="py-4 px-2">
+                        <div className="w-16 h-16 bg-gray-200 rounded-md flex items-center justify-center">
+                          <img
+                            alt="Gambar Produk"
+                            src={item.product?.image}
+                            className="w-full h-full bg-cover"
+                          ></img>
+                        </div>
+                      </td>
+                      <td className="py-4 px-2">
+                        <div className="font-medium text-gray-800 capitalize">
+                          {item.product?.name}
+                        </div>
+                        <div className="text-sm text-gray-600">
+                          {formatWeight(item.product?.weight)}
+                        </div>
+                      </td>
+                      <td className="py-4 px-2"></td>
+                      <td className="py-4 px-2 text-center">
+                        {formatRupiah(item.product?.price)}
+                      </td>
+                      <td className="py-4 px-2 text-center">{item.quantity}</td>
+                      <td className="py-4 px-2 text-right font-medium">
+                        {formatRupiah(item.price)}
+                      </td>
+                    </tr>
+                  ))
+                )}
               </tbody>
             </table>
           </div>
         </div>
+
         <div className="bg-white rounded-lg shadow-sm p-6">
           <h2 className="text-lg font-semibold text-gray-800 mb-6">
             Pembayaran
@@ -288,12 +302,12 @@ function OrderPage() {
               onChange={handleInputChange}
               className="px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-400 focus:border-transparent outline-none"
             >
+              <option value="">Pilih Kota</option>
               <option value="Jakarta">Jakarta</option>
               <option value="Bogor">Bogor</option>
               <option value="Depok">Depok</option>
               <option value="Tangerang">Tangerang</option>
               <option value="Bekasi">Bekasi</option>
-              <option value="Diluar Jabodetabek">Diluar Jabodetabek</option>
             </select>
           </div>
 
@@ -339,7 +353,7 @@ function OrderPage() {
           </div>
         </div>
       </div>
-    </UserLayout>
+    </ProtectedPageUser>
   );
 }
 

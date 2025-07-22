@@ -1,9 +1,9 @@
 import { Calendar, Package, Truck, MapPin } from "lucide-react";
-import UserLayout from "../../layouts/UserLayout";
+import ProtectedPageUser from "../protected/ProtectedPageUser";
 
 function AboutUsPage() {
   return (
-    <UserLayout>
+    <ProtectedPageUser>
       <div className="container mx-auto px-4 py-8">
         {/* Page Title */}
         <div className="text-center mb-12">
@@ -158,7 +158,7 @@ function AboutUsPage() {
           </div>
         </div>
       </div>
-    </UserLayout>
+    </ProtectedPageUser>
   );
 }
 

@@ -12,30 +12,59 @@ import HelpPage from "./pages/user/HelpPage";
 import RegisterPage from "./pages/auth/RegisterPage";
 import DashboardAdminPage from "./pages/admin/DashboardAdminPage";
 import ManageProductPage from "./pages/admin/ManageProductPage";
-import ManageOrderPage from "./pages/admin/ManageOrdePage";
+import ManageOrderPage from "./pages/admin/ManageOrderPage";
+import ManageUserPage from "./pages/admin/ManageUserPage";
+import OrderDetailAdmin from "./pages/admin/OrderDetailAdmin";
+import AdminLayout from "./layouts/AdminLayout";
+import OrderDetailUser from "./pages/user/OrderDetailUser";
+import AuthLayout from "./layouts/AuthLayout";
+import UserLayout from "./layouts/UserLayout";
+import ProfileAdminPage from "./pages/admin/ProfileAdminPage";
+import ProfileUserPage from "./pages/user/ProfileUserPage";
+import NotFoundPage from "./pages/notfound/NotFoundPage";
 
 function App() {
   return (
     <BrowserRouter>
       <Routes>
         {/* User */}
-        <Route path="/" element={<HomePage />} />
-        <Route path="/products" element={<ProductPage />} />
-        <Route path="/products/:productId" element={<ProductDetailPage />} />
-        <Route path="/cart" element={<CartPage />} />
-        <Route path="/order" element={<OrderPage />} />
-        <Route path="/my-order" element={<MyOrderPage />} />
-        <Route path="/about-us" element={<AboutUsPage />} />
-        <Route path="/help" element={<HelpPage />} />
+        <Route path="/" element={<UserLayout />}>
+          <Route index element={<HomePage />} />
+          <Route path="profile" element={<ProfileUserPage />} />
+          <Route path="products" element={<ProductPage />} />
+          <Route path="products/:productId" element={<ProductDetailPage />} />
+          <Route path="cart" element={<CartPage />} />
+          <Route path="order" element={<OrderPage />} />
+          <Route path="my-order" element={<MyOrderPage />} />
+          <Route
+            path="/my-order/order/:orderId"
+            element={<OrderDetailUser />}
+          />
+          <Route path="/about-us" element={<AboutUsPage />} />
+          <Route path="/help" element={<HelpPage />} />
+        </Route>
 
         {/* Auth */}
-        <Route path="/auth/login" element={<LoginPage />} />
-        <Route path="/auth/register" element={<RegisterPage />} />
+        <Route path="/auth" element={<AuthLayout />}>
+          <Route path="login" element={<LoginPage />} />
+          <Route path="register" element={<RegisterPage />} />
+        </Route>
 
         {/* Admin */}
-        <Route path="/admin/dashboard" element={<DashboardAdminPage />} />
-        <Route path="/admin/manage-products" element={<ManageProductPage />} />
-        <Route path="/admin/manage-orders" element={<ManageOrderPage />} />
+        <Route path="/admin" element={<AdminLayout />}>
+          <Route path="profile" element={<ProfileAdminPage />} />
+          <Route path="dashboard" element={<DashboardAdminPage />} />
+          <Route path="manage-products" element={<ManageProductPage />} />
+          <Route path="manage-orders" element={<ManageOrderPage />} />
+          <Route path="manage-users" element={<ManageUserPage />} />
+          <Route
+            path="manage-orders/order/:orderId"
+            element={<OrderDetailAdmin />}
+          />
+        </Route>
+
+        {/* NotFound */}
+        <Route path="*" element={<NotFoundPage />} />
       </Routes>
     </BrowserRouter>
   );

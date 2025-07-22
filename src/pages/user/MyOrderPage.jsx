@@ -1,137 +1,76 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { Package, Eye, Truck, CheckCircle, XCircle } from "lucide-react";
-import UserLayout from "../../layouts/UserLayout";
+import {
+  getToken,
+  formatDate,
+  formatRupiah,
+  getStatusColor,
+} from "../../utils/helper";
+import { axiosInstance } from "../../lib/axios";
+import ProtectedPageUser from "../protected/ProtectedPageUser";
+import Loader from "../../components/Loader";
 
 function MyOrderPage() {
-  const [activeTab, setActiveTab] = useState("DIKIRIM");
-
-  // Data dummy pesanan
-  const dummyOrders = [
-    {
-      id: 1,
-      productName: "Keripik Pisang Original",
-      productImage: "/api/placeholder/80/80",
-      quantity: 2,
-      price: 25000,
-      totalPrice: 50000,
-      status: "DIPROSES",
-      orderDate: "2024-01-15",
-      estimatedDelivery: "2024-01-20",
-    },
-    {
-      id: 2,
-      productName: "Kue Kering Lebaran",
-      productImage: "/api/placeholder/80/80",
-      quantity: 1,
-      price: 75000,
-      totalPrice: 75000,
-      status: "DIBAYAR",
-      orderDate: "2024-01-14",
-      estimatedDelivery: "2024-01-19",
-    },
-    {
-      id: 3,
-      productName: "Nama Produk",
-      productImage: "/api/placeholder/80/80",
-      quantity: 1,
-      price: 25000,
-      totalPrice: 25000,
-      status: "DIKIRIM",
-      orderDate: "2024-01-13",
-      estimatedDelivery: "2024-01-18",
-    },
-    {
-      id: 4,
-      productName: "Keripik Singkong Balado",
-      productImage: "/api/placeholder/80/80",
-      quantity: 3,
-      price: 20000,
-      totalPrice: 60000,
-      status: "SELESAI",
-      orderDate: "2024-01-12",
-      estimatedDelivery: "2024-01-17",
-    },
-    {
-      id: 5,
-      productName: "Kacang Mete Premium",
-      productImage: "/api/placeholder/80/80",
-      quantity: 1,
-      price: 45000,
-      totalPrice: 45000,
-      status: "DIBATALKAN",
-      orderDate: "2024-01-11",
-      estimatedDelivery: null,
-    },
-  ];
+  const token = getToken();
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const [orders, setOrders] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [statusValue, setStatusValue] = useState("DIPROSES");
 
   const tabs = [
-    { id: "DIPROSES", label: "DIPROSES", icon: Package },
-    { id: "DIBAYAR", label: "DIBAYAR", icon: CheckCircle },
-    { id: "DIKIRIM", label: "DIKIRIM", icon: Truck },
-    { id: "SELESAI", label: "SELESAI", icon: CheckCircle },
-    { id: "DIBATALKAN", label: "DIBATALKAN", icon: XCircle },
+    { id: 1, value: "DIPROSES", label: "DIPROSES", icon: Package },
+    { id: 2, value: "DIBAYAR", label: "DIBAYAR", icon: CheckCircle },
+    { id: 3, value: "DIKIRIM", label: "DIKIRIM", icon: Truck },
+    { id: 4, value: "SELESAI", label: "SELESAI", icon: CheckCircle },
+    { id: 5, value: "DIBATALKAN", label: "DIBATALKAN", icon: XCircle },
   ];
 
-  const getStatusColor = (status) => {
-    switch (status) {
-      case "DIPROSES":
-        return "text-orange-600";
-      case "DIBAYAR":
-        return "text-blue-600";
-      case "DIKIRIM":
-        return "text-blue-500";
-      case "SELESAI":
-        return "text-green-600";
-      case "DIBATALKAN":
-        return "text-red-600";
-      default:
-        return "text-gray-600";
+  const fetchOrders = async (status) => {
+    setLoading(true);
+    try {
+      const { data } = await axiosInstance.get("/api/orders/me", {
+        params: {
+          status: status || "DIPROSES",
+        },
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      setOrders(data.data);
+    } catch (error) {
+      console.error("Gagal memuat data pesanan:", error);
+      alert("Gagal memuat data pesanan", error.message);
+    } finally {
+      setLoading(false);
     }
   };
 
-  const getActionButton = (status, orderId) => {
-    switch (status) {
-      case "DIPROSES":
-        return (
-          <button className="px-4 py-2 text-sm text-red-600 border border-red-600 rounded hover:bg-red-50">
-            Batalkan
-          </button>
-        );
-      case "DIBAYAR":
-        return (
-          <button className="px-4 py-2 text-sm text-blue-600 border border-blue-600 rounded hover:bg-blue-50">
-            Lacak Pesanan
-          </button>
-        );
-      case "DIKIRIM":
-        return (
-          <button className="px-4 py-2 text-sm text-white bg-blue-500 rounded hover:bg-blue-600">
-            Lihat Pesanan
-          </button>
-        );
-      case "SELESAI":
-        return (
-          <button className="px-4 py-2 text-sm text-blue-600 border border-blue-600 rounded hover:bg-blue-50">
-            Beli Lagi
-          </button>
-        );
-      case "DIBATALKAN":
-        return (
-          <button className="px-4 py-2 text-sm text-blue-600 border border-blue-600 rounded hover:bg-blue-50">
-            Beli Lagi
-          </button>
-        );
-      default:
-        return null;
-    }
-  };
+  useEffect(() => {
+    fetchOrders(statusValue);
+  }, [statusValue]);
 
-  const filteredOrders = dummyOrders.filter(
-    (order) => order.status === activeTab
-  );
+  useEffect(() => {
+    const params = new URLSearchParams(searchParams.toString());
+    params.delete("status");
+    navigate(`/my-order?${params.toString()}`, { replace: true });
+  }, []);
+
+  const handleDataOrderByStatus = async (status) => {
+    setStatusValue(status);
+    const params = new URLSearchParams(searchParams.toString());
+    if (statusValue) {
+      params.set("status", status);
+    } else {
+      setStatusValue("DIPROSES");
+      params.delete("status");
+    }
+    navigate(`/my-order?${params.toString()}`, { replace: true });
+  };
 
   return (
-    <UserLayout>
+    <ProtectedPageUser>
       <div className="min-h-screen bg-gray-50">
         <div className="container mx-auto px-4 py-8">
           <h1 className="text-2xl font-bold text-gray-800 mb-8">
@@ -140,16 +79,18 @@ function MyOrderPage() {
 
           {/* Tab Navigation */}
           <div className="bg-white rounded-lg shadow-sm mb-6">
-            <div className="flex border-b">
+            <div className="flex">
               {tabs.map((tab) => {
                 const Icon = tab.icon;
                 return (
                   <button
                     key={tab.id}
-                    onClick={() => setActiveTab(tab.id)}
-                    className={`flex-1 px-4 py-4 text-center font-medium transition-colors ${
-                      activeTab === tab.id
-                        ? "text-blue-600 border-b-2 border-blue-600 bg-blue-50"
+                    onClick={() => {
+                      handleDataOrderByStatus(tab.value);
+                    }}
+                    className={`flex-1 px-4 py-4 text-center font-medium transition-colors cursor-pointer ${
+                      statusValue === tab.value
+                        ? "text-blue-400 border-b-2 border-blue-400 bg-blue-50"
                         : "text-gray-500 hover:text-gray-700"
                     }`}
                   >
@@ -165,84 +106,93 @@ function MyOrderPage() {
 
           {/* Order List */}
           <div className="space-y-4">
-            {filteredOrders.length === 0 ? (
+            {orders.length === 0 ? (
               <div className="bg-white rounded-lg shadow-sm p-12 text-center">
                 <Package className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-                <p className="text-gray-500 text-lg">
-                  Tidak ada pesanan dengan status {activeTab.toLowerCase()}
-                </p>
+                <p className="text-gray-500 text-lg">Tidak ada pesanan</p>
               </div>
+            ) : loading ? (
+              <Loader>Memuat data pesanan...</Loader>
             ) : (
-              filteredOrders.map((order) => (
-                <div
-                  key={order.id}
-                  className="bg-white rounded-lg shadow-sm border"
-                >
+              orders?.map((order) => (
+                <div key={order.id} className="bg-white rounded-lg shadow-sm">
                   <div className="p-6">
                     <div className="flex items-center justify-between mb-4">
                       <div className="flex items-center space-x-2">
-                        <span className="text-sm text-gray-600">
-                          Pesanan #{order.id} • {order.orderDate}
-                        </span>
+                        <p className="text-sm text-gray-600">
+                          {formatDate(order.order_time)} - Pesanan{" "}
+                          <span className="text-sm text-gray-600">
+                            #{order.id}
+                          </span>{" "}
+                        </p>
                       </div>
-                      <div className="flex items-center space-x-4">
+                      <div className="flex items-center">
                         <span
-                          className={`text-sm font-medium ${getStatusColor(
+                          className={`px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(
                             order.status
                           )}`}
                         >
                           {order.status}
                         </span>
-                        {activeTab === "DIKIRIM" && (
-                          <button className="text-blue-600 hover:text-blue-800">
-                            <span className="text-sm">DIKIRIM</span>
-                          </button>
-                        )}
                       </div>
                     </div>
 
-                    <div className="border-t pt-4">
-                      <div className="flex items-center space-x-4">
-                        {/* Product Image */}
-                        <div className="flex-shrink-0">
-                          <div className="w-20 h-20 bg-gray-200 rounded-lg flex items-center justify-center">
-                            <Package className="w-8 h-8 text-gray-400" />
+                    <div className="border-t border-gray-300 pt-2">
+                      <h2 className="text-base text-gray-600 font-medium">
+                        Produk
+                      </h2>
+                      <div className="flex items-center space-x-4 max-w-full overflow-x-auto p-2">
+                        {order?.order_items?.map((item) => (
+                          <div
+                            key={item.id}
+                            className="flex w-44 items-center space-x-2 bg-gray-100 ring-1 ring-gray-300 p-2 rounded-lg"
+                          >
+                            {/* Product Image */}
+                            <div className="w-fit justify-center items-center">
+                              <div className="w-20 h-20 bg-gray-200 rounded-lg flex items-center justify-center">
+                                <img
+                                  src={item.product.image}
+                                  alt={item.product.name}
+                                  className="w-full h-full bg-cover rounded-lg"
+                                />
+                              </div>
+                            </div>
+
+                            {/* Product Details */}
+                            <div className="flex-1 min-w-0">
+                              <h3
+                                className="font-medium text-gray-800 mb-1 truncate capitalize"
+                                title={item.product.name}
+                              >
+                                {item.product.name}
+                              </h3>
+                              <p className="text-sm text-gray-600">
+                                x{item.quantity}
+                              </p>
+                            </div>
                           </div>
-                        </div>
-
-                        {/* Product Details */}
-                        <div className="flex-1">
-                          <h3 className="font-medium text-gray-800 mb-1">
-                            {order.productName}
-                          </h3>
-                          <p className="text-sm text-gray-600">
-                            x{order.quantity}
-                          </p>
-                          {order.estimatedDelivery && (
-                            <p className="text-sm text-gray-500 mt-1">
-                              Estimasi tiba: {order.estimatedDelivery}
-                            </p>
-                          )}
-                        </div>
-
-                        {/* Price */}
-                        <div className="text-right">
-                          <p className="font-semibold text-gray-800">
-                            Rp {order.totalPrice.toLocaleString("id-ID")}
-                          </p>
-                        </div>
+                        ))}
                       </div>
 
                       {/* Action Buttons */}
-                      <div className="flex justify-between items-center mt-4 pt-4 border-t">
-                        <div className="text-sm text-gray-600">
-                          <span className="font-medium">Total Pesanan</span>
+                      <div className="flex justify-between items-center mt-4 pt-4 border-t border-gray-300">
+                        <div className="flex items-center text-sm text-gray-600">
+                          <span className="font-medium">
+                            Total Pesanan:{" "}
+                            <span className="font-semibold text-lg text-black">
+                              {formatRupiah(order.total_price)}
+                            </span>
+                          </span>
                         </div>
                         <div className="flex items-center space-x-3">
-                          <span className="font-semibold text-lg">
-                            Rp {order.totalPrice.toLocaleString("id-ID")}
-                          </span>
-                          {getActionButton(order.status, order.id)}
+                          <button
+                            onClick={() =>
+                              navigate(`/my-order/order/${order.id}`)
+                            }
+                            className="px-4 py-2 text-sm text-blue-600 border border-blue-600 rounded hover:bg-blue-50 cursor-pointer"
+                          >
+                            Lihat Pesanan
+                          </button>
                         </div>
                       </div>
                     </div>
@@ -253,7 +203,7 @@ function MyOrderPage() {
           </div>
         </div>
       </div>
-    </UserLayout>
+    </ProtectedPageUser>
   );
 }
 

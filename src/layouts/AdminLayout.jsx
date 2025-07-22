@@ -1,116 +1,149 @@
-"use client";
-
 import { useState, useRef, useEffect } from "react";
 import {
+  X,
   Bell,
   User,
-  LayoutDashboard,
+  Clock,
+  Users,
+  LogOut,
   Package,
   FileText,
-  Users,
-  MessageSquare,
-  LogOut,
-  X,
-  Clock,
-  CheckCircle,
-  AlertCircle,
-  ShoppingBag,
-  UserPlus,
+  LayoutDashboard,
 } from "lucide-react";
+import { axiosInstance } from "../lib/axios";
+import { Outlet, useNavigate, useSearchParams } from "react-router-dom";
+import { formatRelativeTime, getToken } from "../utils/helper";
 
-export default function AdminLayout({ children }) {
-  const [showNotifications, setShowNotifications] = useState(false);
-  const [notifications, setNotifications] = useState([
-    {
-      id: 1,
-      type: "order",
-      title: "Pesanan Baru",
-      message: "Pesanan #12345 dari Ahmad Rizky telah diterima",
-      time: "2 menit yang lalu",
-      isRead: false,
-      icon: ShoppingBag,
-      iconColor: "text-blue-500",
-      bgColor: "bg-blue-50",
-    },
-    {
-      id: 2,
-      type: "order",
-      title: "Pesanan Selesai",
-      message: "Pesanan #12344 dari Siti Nurhaliza telah selesai",
-      time: "15 menit yang lalu",
-      isRead: false,
-      icon: CheckCircle,
-      iconColor: "text-green-500",
-      bgColor: "bg-green-50",
-    },
-    {
-      id: 3,
-      type: "stock",
-      title: "Stok Menipis",
-      message: "Stok Keripik Pisang Original tersisa 5 buah",
-      time: "30 menit yang lalu",
-      isRead: true,
-      icon: AlertCircle,
-      iconColor: "text-orange-500",
-      bgColor: "bg-orange-50",
-    },
-    {
-      id: 4,
-      type: "user",
-      title: "Pengguna Baru",
-      message: "Maria Dewi telah mendaftar sebagai pelanggan baru",
-      time: "1 jam yang lalu",
-      isRead: true,
-      icon: UserPlus,
-      iconColor: "text-purple-500",
-      bgColor: "bg-purple-50",
-    },
-    {
-      id: 5,
-      type: "order",
-      title: "Pembayaran Berhasil",
-      message: "Pembayaran pesanan #12343 dari Budi Santoso telah dikonfirmasi",
-      time: "2 jam yang lalu",
-      isRead: true,
-      icon: CheckCircle,
-      iconColor: "text-green-500",
-      bgColor: "bg-green-50",
-    },
-  ]);
-
+export default function AdminLayout() {
+  const navigate = useNavigate();
   const notificationRef = useRef(null);
+  const [notifications, setNotifications] = useState([]);
+  const [showNotifications, setShowNotifications] = useState(false);
 
-  // Close notification when clicking outside
+  const token = getToken();
+  const userMenuRef = useRef(null);
+  const [user, setUser] = useState({});
+  const [searchParams] = useSearchParams();
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [showUserMenu, setShowUserMenu] = useState(false);
+  const [notificationLoading, setNotificationLoading] = useState(false);
+
+  const fetchUsers = async () => {
+    try {
+      const { data } = await axiosInstance.get("/api/admin/users/me", {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      setUser(data.data);
+    } catch (error) {
+      console.error("Gagal memuat data pengguna:", error);
+      alert("Gagal memuat data pengguna", error.message);
+    }
+  };
+
   useEffect(() => {
-    const handleClickOutside = (event) => {
+    if (token) fetchUsers();
+  }, [token]);
+
+  const fetchNotifications = async () => {
+    try {
+      setNotificationLoading(true);
+      const { data } = await axiosInstance.get("/api/notifications", {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      setNotifications(data.data);
+      setUnreadCount(data.data.filter((n) => !n.is_read).length);
+    } catch (error) {
+      console.error("Error fetching notifications:", error);
+    } finally {
+      setNotificationLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (token) fetchNotifications();
+  }, [token]);
+
+  const markAsRead = async (id) => {
+    try {
+      await axiosInstance.put(
+        `/api/notifications/${id}/read`,
+        {},
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+      const updated = notifications.map((n) =>
+        n.id === id ? { ...n, is_read: true } : n
+      );
+      setNotifications(updated);
+      setUnreadCount(updated.filter((n) => !n.is_read).length);
+    } catch (error) {
+      console.error("Error marking notification as read:", error);
+    }
+  };
+
+  const markAllAsRead = async () => {
+    try {
+      await axiosInstance.put(
+        "/api/notifications/read-all",
+        {},
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+      const updated = notifications.map((n) => ({ ...n, is_read: true }));
+      setNotifications(updated);
+      setUnreadCount(0);
+    } catch (error) {
+      console.error("Error marking all notifications as read:", error);
+    }
+  };
+
+  const deleteNotification = async (id) => {
+    try {
+      await axiosInstance.delete(`/api/notifications/${id}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      const updated = notifications.filter((n) => n.id !== id);
+      setNotifications(updated);
+      setUnreadCount(updated.filter((n) => !n.is_read).length);
+    } catch (error) {
+      console.error("Error deleting notification:", error);
+    }
+  };
+
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (userMenuRef.current && !userMenuRef.current.contains(e.target)) {
+        setShowUserMenu(false);
+      }
       if (
         notificationRef.current &&
-        !notificationRef.current.contains(event.target)
+        !notificationRef.current.contains(e.target)
       ) {
         setShowNotifications(false);
       }
     };
-
     document.addEventListener("mousedown", handleClickOutside);
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
+    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const unreadCount = notifications.filter((n) => !n.isRead).length;
-
-  const markAsRead = (id) => {
-    setNotifications(
-      notifications.map((n) => (n.id === id ? { ...n, isRead: true } : n))
-    );
-  };
-
-  const markAllAsRead = () => {
-    setNotifications(notifications.map((n) => ({ ...n, isRead: true })));
-  };
-
-  const deleteNotification = (id) => {
-    setNotifications(notifications.filter((n) => n.id !== id));
+  const handleLougout = () => {
+    if (window.confirm("Ingin keluar sekarang?")) {
+      localStorage.removeItem("token");
+      localStorage.removeItem("role");
+      navigate("/auth/login");
+    }
   };
 
   return (
@@ -130,9 +163,9 @@ export default function AdminLayout({ children }) {
             <div className="relative" ref={notificationRef}>
               <button
                 onClick={() => setShowNotifications(!showNotifications)}
-                className="p-2 rounded-lg hover:bg-blue-500 transition-colors relative"
+                className="p-2 hover:bg-gray-100 rounded-lg relative group cursor-pointer"
               >
-                <Bell className="w-6 h-6 text-white" />
+                <Bell className="w-6 h-6 text-white group-hover:text-blue-400" />
                 {unreadCount > 0 && (
                   <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
                     {unreadCount > 99 ? "99+" : unreadCount}
@@ -143,7 +176,6 @@ export default function AdminLayout({ children }) {
               {/* Notification Dropdown */}
               {showNotifications && (
                 <div className="absolute right-0 mt-2 w-96 bg-white rounded-lg shadow-lg border border-gray-200 z-50">
-                  {/* Header */}
                   <div className="flex items-center justify-between p-4 border-b border-gray-200">
                     <div className="flex items-center space-x-2">
                       <h3 className="text-lg font-semibold text-gray-900">
@@ -173,86 +205,63 @@ export default function AdminLayout({ children }) {
                     </div>
                   </div>
 
-                  {/* Notification List */}
                   <div className="max-h-96 overflow-y-auto">
-                    {notifications.length === 0 ? (
+                    {notificationLoading ? (
+                      <div className="p-8 text-center text-gray-500">
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto mb-4"></div>
+                        <p>Memuat notifikasi...</p>
+                      </div>
+                    ) : notifications.length === 0 ? (
                       <div className="p-8 text-center text-gray-500">
                         <Bell className="w-12 h-12 mx-auto mb-4 text-gray-300" />
                         <p>Tidak ada notifikasi</p>
                       </div>
                     ) : (
-                      notifications.map((notification) => {
-                        const IconComponent = notification.icon;
-                        return (
-                          <div
-                            key={notification.id}
-                            className={`p-4 border-b border-gray-100 hover:bg-gray-50 transition-colors ${
-                              !notification.isRead ? "bg-blue-50" : ""
-                            }`}
-                          >
-                            <div className="flex items-start space-x-3">
-                              <div
-                                className={`flex-shrink-0 w-10 h-10 rounded-full ${notification.bgColor} flex items-center justify-center`}
-                              >
-                                <IconComponent
-                                  className={`w-5 h-5 ${notification.iconColor}`}
-                                />
-                              </div>
-                              <div className="flex-1 min-w-0">
-                                <div className="flex items-center justify-between">
-                                  <p
-                                    className={`text-sm font-medium ${
-                                      !notification.isRead
-                                        ? "text-gray-900"
-                                        : "text-gray-700"
-                                    }`}
-                                  >
-                                    {notification.title}
-                                  </p>
+                      notifications.map((n) => (
+                        <div
+                          key={n.id}
+                          className={`p-4 border-b border-gray-100 hover:bg-gray-50 transition-colors ${
+                            !n.is_read ? "bg-blue-50" : ""
+                          }`}
+                        >
+                          <div className="flex items-start space-x-3">
+                            <div className="flex-shrink-0 w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center">
+                              <Bell className="w-5 h-5 text-blue-500" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm text-gray-600 mt-1">
+                                {n.message}
+                              </p>
+                              <div className="flex items-center justify-between mt-2">
+                                <div className="flex items-center space-x-1 text-xs text-gray-500">
+                                  <Clock className="w-3 h-3" />
+                                  <span>
+                                    {formatRelativeTime(n.created_at)}
+                                  </span>
+                                </div>
+                                {!n.is_read && (
                                   <button
-                                    onClick={() =>
-                                      deleteNotification(notification.id)
-                                    }
-                                    className="text-gray-400 hover:text-gray-600 ml-2"
+                                    onClick={() => markAsRead(n.id)}
+                                    className="text-xs text-blue-600 hover:text-blue-800"
                                   >
-                                    <X className="w-4 h-4" />
+                                    Tandai dibaca
                                   </button>
-                                </div>
-                                <p className="text-sm text-gray-600 mt-1">
-                                  {notification.message}
-                                </p>
-                                <div className="flex items-center justify-between mt-2">
-                                  <div className="flex items-center space-x-1 text-xs text-gray-500">
-                                    <Clock className="w-3 h-3" />
-                                    <span>{notification.time}</span>
-                                  </div>
-                                  {!notification.isRead && (
-                                    <button
-                                      onClick={() =>
-                                        markAsRead(notification.id)
-                                      }
-                                      className="text-xs text-blue-600 hover:text-blue-800"
-                                    >
-                                      Tandai dibaca
-                                    </button>
-                                  )}
-                                </div>
+                                )}
                               </div>
                             </div>
+                            <div className="flex-shrink-0 w-min">
+                              <button
+                                onClick={() => deleteNotification(n.id)}
+                                className="text-red-400 hover:text-red-600 ml-2"
+                              >
+                                <X className="w-4 h-4" />
+                              </button>
+                            </div>
                           </div>
-                        );
-                      })
+                        </div>
+                      ))
                     )}
                   </div>
-
-                  {/* Footer */}
-                  {notifications.length > 0 && (
-                    <div className="p-4 border-t border-gray-200">
-                      {/* <button className="w-full text-center text-sm text-blue-600 hover:text-blue-800">
-                        Lihat semua notifikasi
-                      </button> */}
-                    </div>
-                  )}
                 </div>
               )}
             </div>
@@ -262,8 +271,8 @@ export default function AdminLayout({ children }) {
                 <User className="w-6 h-6 text-gray-800" />
               </div>
               <div>
-                <p className="text-sm font-semibold text-gray-900">
-                  Irfan Tu..
+                <p className="text-sm font-semibold text-gray-900 capitalize truncate">
+                  {user?.name}
                 </p>
                 <p className="text-xs text-white">Admin</p>
               </div>
@@ -272,9 +281,9 @@ export default function AdminLayout({ children }) {
         </div>
       </header>
 
-      <div className="flex">
+      <div className="flex max-w-full">
         {/* Sidebar */}
-        <aside className="w-64 bg-white shadow-sm min-h-screen">
+        <aside className="w-64 bg-white shadow-sm min-h-screen flex-shrink-0">
           <div className="p-6">
             <div className="border-b-2 border-blue-400 py-4 text-center">
               <h2 className="text-xl font-medium text-gray-900">MENU</h2>
@@ -302,25 +311,34 @@ export default function AdminLayout({ children }) {
                 <span>Pesanan</span>
               </a>
               <a
-                href="/admin/pengguna"
+                href="/admin/manage-users"
                 className="flex items-center space-x-3 px-4 py-3 text-gray-500 hover:bg-gray-100 rounded-lg"
               >
                 <Users className="w-5 h-5" />
                 <span>Pengguna</span>
               </a>
               <a
-                href="/logout"
+                href="/admin/profile"
                 className="flex items-center space-x-3 px-4 py-3 text-gray-500 hover:bg-gray-100 rounded-lg"
+              >
+                <User className="w-5 h-5" />
+                <span>Profil</span>
+              </a>
+              <button
+                onClick={handleLougout}
+                className="flex items-center space-x-3 px-4 py-3 text-gray-500 hover:bg-gray-100 rounded-lg cursor-pointer"
               >
                 <LogOut className="w-5 h-5" />
                 <span>Keluar</span>
-              </a>
+              </button>
             </nav>
           </div>
         </aside>
 
         {/* Main Content */}
-        <main className="flex-1 p-6">{children}</main>
+        <main className="flex-1 p-6 min-w-0">
+          <Outlet />
+        </main>
       </div>
     </div>
   );

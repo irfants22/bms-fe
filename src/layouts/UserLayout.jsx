@@ -1,55 +1,22 @@
-import { User, Search, ShoppingCart, Bell, X, Clock } from "lucide-react";
-import { FaFacebook, FaInstagram, FaTwitter } from "react-icons/fa";
-import { useEffect, useRef, useState } from "react";
-import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { axiosInstance } from "../lib/axios";
+import { useEffect, useRef, useState } from "react";
+import { formatRelativeTime, getToken } from "../utils/helper";
+import { FaFacebook, FaInstagram, FaTwitter } from "react-icons/fa";
+import { User, Search, ShoppingCart, Bell, X, Clock } from "lucide-react";
+import { Link, Outlet, useNavigate, useSearchParams } from "react-router-dom";
 
-function UserLayout({ children }) {
-  const [token, setToken] = useState(null);
+function UserLayout() {
+  const token = getToken();
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [notificationLoading, setNotificationLoading] = useState(false);
-  const userMenuRef = useRef(null);
-  const notificationRef = useRef(null);
-  //   Update
   const [query, setQuery] = useState("");
   const [searchParams] = useSearchParams();
+  const userMenuRef = useRef(null);
+  const notificationRef = useRef(null);
   const navigate = useNavigate();
-
-  useEffect(() => {
-    const storedToken = localStorage.getItem("token");
-    setToken(storedToken);
-  }, []);
-
-  // Fetch notifications dari API
-  const fetchNotifications = async () => {
-    try {
-      setNotificationLoading(true);
-      const response = await axiosInstance.get("/api/notifications", {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
-      if (response.data.success) {
-        setNotifications(response.data.data);
-        setUnreadCount(response.data.data.filter((n) => !n.isRead).length);
-      }
-    } catch (error) {
-      console.error("Error fetching notifications:", error);
-    } finally {
-      setNotificationLoading(false);
-    }
-  };
-
-  // Load notifications saat komponen mount dan token tersedia
-  useEffect(() => {
-    if (token) {
-      fetchNotifications();
-    }
-  }, [token]);
 
   const handleSearch = () => {
     const params = new URLSearchParams(searchParams.toString());
@@ -61,9 +28,30 @@ function UserLayout({ children }) {
     navigate(`/products?${params.toString()}`, { replace: true });
   };
 
+  const fetchNotifications = async () => {
+    try {
+      setNotificationLoading(true);
+      const { data } = await axiosInstance.get("/api/notifications", {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      setNotifications(data.data);
+      setUnreadCount(data.data.filter((n) => !n.is_read).length);
+    } catch (error) {
+      console.error("Error fetching notifications:", error);
+    } finally {
+      setNotificationLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (token) fetchNotifications();
+  }, [token]);
+
   const markAsRead = async (id) => {
     try {
-      const response = await axios.put(
+      await axiosInstance.put(
         `/api/notifications/${id}/read`,
         {},
         {
@@ -72,13 +60,11 @@ function UserLayout({ children }) {
           },
         }
       );
-      if (response.data.success) {
-        const updated = notifications.map((n) =>
-          n.id === id ? { ...n, isRead: true } : n
-        );
-        setNotifications(updated);
-        setUnreadCount(updated.filter((n) => !n.isRead).length);
-      }
+      const updated = notifications.map((n) =>
+        n.id === id ? { ...n, is_read: true } : n
+      );
+      setNotifications(updated);
+      setUnreadCount(updated.filter((n) => !n.is_read).length);
     } catch (error) {
       console.error("Error marking notification as read:", error);
     }
@@ -86,7 +72,7 @@ function UserLayout({ children }) {
 
   const markAllAsRead = async () => {
     try {
-      const response = await axios.put(
+      await axiosInstance.put(
         "/api/notifications/read-all",
         {},
         {
@@ -95,11 +81,9 @@ function UserLayout({ children }) {
           },
         }
       );
-      if (response.data.success) {
-        const updated = notifications.map((n) => ({ ...n, isRead: true }));
-        setNotifications(updated);
-        setUnreadCount(0);
-      }
+      const updated = notifications.map((n) => ({ ...n, is_read: true }));
+      setNotifications(updated);
+      setUnreadCount(0);
     } catch (error) {
       console.error("Error marking all notifications as read:", error);
     }
@@ -107,22 +91,19 @@ function UserLayout({ children }) {
 
   const deleteNotification = async (id) => {
     try {
-      const response = await axios.delete(`/api/notifications/${id}`, {
+      await axiosInstance.delete(`/api/notifications/${id}`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
       });
-      if (response.data.success) {
-        const updated = notifications.filter((n) => n.id !== id);
-        setNotifications(updated);
-        setUnreadCount(updated.filter((n) => !n.isRead).length);
-      }
+      const updated = notifications.filter((n) => n.id !== id);
+      setNotifications(updated);
+      setUnreadCount(updated.filter((n) => !n.is_read).length);
     } catch (error) {
       console.error("Error deleting notification:", error);
     }
   };
 
-  // Click outside untuk close
   useEffect(() => {
     const handleClickOutside = (e) => {
       if (userMenuRef.current && !userMenuRef.current.contains(e.target)) {
@@ -138,6 +119,14 @@ function UserLayout({ children }) {
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
+
+  const handleLougout = () => {
+    if (window.confirm("Ingin keluar sekarang?")) {
+      localStorage.removeItem("token");
+      localStorage.removeItem("role");
+      navigate("/auth/login");
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
@@ -178,7 +167,7 @@ function UserLayout({ children }) {
               </div>
             </div>
 
-            {/* Right Section */}
+            {/* Icon Menu Section */}
             <div className="flex items-center space-x-4">
               {/* Notification Button */}
               <div className="relative" ref={notificationRef}>
@@ -242,7 +231,7 @@ function UserLayout({ children }) {
                           <div
                             key={n.id}
                             className={`p-4 border-b border-gray-100 hover:bg-gray-50 transition-colors ${
-                              !n.isRead ? "bg-blue-50" : ""
+                              !n.is_read ? "bg-blue-50" : ""
                             }`}
                           >
                             <div className="flex items-start space-x-3">
@@ -250,32 +239,17 @@ function UserLayout({ children }) {
                                 <Bell className="w-5 h-5 text-blue-500" />
                               </div>
                               <div className="flex-1 min-w-0">
-                                <div className="flex items-center justify-between">
-                                  <p
-                                    className={`text-sm font-medium ${
-                                      !n.isRead
-                                        ? "text-gray-900"
-                                        : "text-gray-700"
-                                    }`}
-                                  >
-                                    {n.title}
-                                  </p>
-                                  <button
-                                    onClick={() => deleteNotification(n.id)}
-                                    className="text-gray-400 hover:text-gray-600 ml-2"
-                                  >
-                                    <X className="w-4 h-4" />
-                                  </button>
-                                </div>
                                 <p className="text-sm text-gray-600 mt-1">
                                   {n.message}
                                 </p>
                                 <div className="flex items-center justify-between mt-2">
                                   <div className="flex items-center space-x-1 text-xs text-gray-500">
                                     <Clock className="w-3 h-3" />
-                                    <span>{n.time}</span>
+                                    <span>
+                                      {formatRelativeTime(n.created_at)}
+                                    </span>
                                   </div>
-                                  {!n.isRead && (
+                                  {!n.is_read && (
                                     <button
                                       onClick={() => markAsRead(n.id)}
                                       className="text-xs text-blue-600 hover:text-blue-800"
@@ -284,6 +258,14 @@ function UserLayout({ children }) {
                                     </button>
                                   )}
                                 </div>
+                              </div>
+                              <div className="flex-shrink-0 w-min">
+                                <button
+                                  onClick={() => deleteNotification(n.id)}
+                                  className="text-red-400 hover:text-red-600 ml-2"
+                                >
+                                  <X className="w-4 h-4" />
+                                </button>
                               </div>
                             </div>
                           </div>
@@ -307,7 +289,7 @@ function UserLayout({ children }) {
                 <div className="relative" ref={userMenuRef}>
                   <button
                     onClick={() => setShowUserMenu(!showUserMenu)}
-                    className="p-2 hover:bg-gray-100 rounded-lg group"
+                    className="p-2 hover:bg-gray-100 rounded-lg group cursor-pointer"
                   >
                     <User className="w-6 h-6 text-white group-hover:text-blue-400" />
                   </button>
@@ -333,13 +315,10 @@ function UserLayout({ children }) {
                         </li>
                         <li>
                           <button
-                            onClick={() => {
-                              localStorage.removeItem("token");
-                              navigate("/auth/login");
-                            }}
-                            className="w-full text-left px-4 py-2 text-gray-700 hover:bg-gray-100"
+                            onClick={handleLougout}
+                            className="w-full text-left px-4 py-2 text-gray-700 hover:bg-gray-100 cursor-pointer"
                           >
-                            Logout
+                            Keluar
                           </button>
                         </li>
                       </ul>
@@ -349,7 +328,7 @@ function UserLayout({ children }) {
               ) : (
                 <Link
                   to="/auth/login"
-                  className="p-2 hover:bg-gray-100 rounded-lg group"
+                  className="p-2 hover:bg-gray-100 rounded-lg group cursor-pointer"
                 >
                   <User className="w-6 h-6 text-white group-hover:text-blue-400" />
                 </Link>
@@ -376,7 +355,9 @@ function UserLayout({ children }) {
       </header>
 
       {/* Main Content */}
-      <main className="flex-1">{children}</main>
+      <main className="flex-1">
+        <Outlet />
+      </main>
 
       {/* Footer */}
       <footer className="bg-blue-200 mt-16">

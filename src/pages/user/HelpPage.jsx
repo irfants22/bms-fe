@@ -1,15 +1,15 @@
 import { useState } from "react";
 import {
-  CheckCircle,
-  Package,
-  CreditCard,
-  Truck,
-  UserCheck,
-  FileText,
-  MessageCircle,
   Bell,
+  Truck,
+  Package,
+  FileText,
+  UserCheck,
+  CreditCard,
+  CheckCircle,
+  MessageCircle,
 } from "lucide-react";
-import UserLayout from "../../layouts/UserLayout";
+import ProtectedPageUser from "../protected/ProtectedPageUser";
 
 function HelpPage() {
   const orderSteps = [
@@ -94,7 +94,7 @@ function HelpPage() {
   const [expandedFaq, setExpandedFaq] = useState(null);
 
   return (
-    <UserLayout>
+    <ProtectedPageUser>
       <div className="min-h-screen bg-gray-50">
         {/* Hero Section */}
         <div className="bg-white">
@@ -279,7 +279,7 @@ function HelpPage() {
           </div>
         </div>
       </div>
-    </UserLayout>
+    </ProtectedPageUser>
   );
 }
 
