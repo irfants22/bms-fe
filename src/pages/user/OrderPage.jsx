@@ -140,6 +140,7 @@ function OrderPage() {
             timer: 1500,
             width: 400,
           });
+          navigate("/my-order");
         },
         onPending: function (result) {
           console.log("Menunggu pembayaran", result);
@@ -152,6 +153,7 @@ function OrderPage() {
             timer: 1500,
             width: 400,
           });
+          navigate("/my-order");
         },
         onError: function (result) {
           console.error("Pembayaran gagal!", result);
@@ -164,6 +166,7 @@ function OrderPage() {
             timer: 1500,
             width: 400,
           });
+          navigate("/my-order");
         },
         onClose: function () {
           navigate("/my-order");
@@ -176,6 +179,7 @@ function OrderPage() {
             timer: 1500,
             width: 400,
           });
+          navigate("/my-order");
         },
       });
     } catch (error) {
