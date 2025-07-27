@@ -22,7 +22,7 @@ function OrderPage() {
   const [cartItems, setCartItems] = useState([]);
   const [shippingCost, setShippingCost] = useState(0);
   const [loadingItems, setLoadingItems] = useState(false);
-  const { addUnpaidOrder } = useUnpaidOrders();
+  const { addUnpaidOrder, removeUnpaidOrder } = useUnpaidOrders();
 
   const fetchUser = async () => {
     try {
