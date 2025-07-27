@@ -38,7 +38,6 @@ function ManageUserPage() {
       setTotalPages(pages || 0);
     } catch (error) {
       console.error("Gagal memuat data pengguna:", error);
-      alert("Gagal memuat data pengguna", error.message);
     } finally {
       setLoading(false);
     }

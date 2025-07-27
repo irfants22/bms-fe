@@ -11,11 +11,19 @@ import {
   LayoutDashboard,
 } from "lucide-react";
 import { axiosInstance } from "../lib/axios";
-import { Outlet, useNavigate, useSearchParams } from "react-router-dom";
+import {
+  Outlet,
+  useLocation,
+  useNavigate,
+  useSearchParams,
+} from "react-router-dom";
 import { formatRelativeTime, getToken } from "../utils/helper";
+import Swal from "sweetalert2";
 
 export default function AdminLayout() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const { pathname } = location;
   const notificationRef = useRef(null);
   const [notifications, setNotifications] = useState([]);
   const [showNotifications, setShowNotifications] = useState(false);
@@ -38,7 +46,6 @@ export default function AdminLayout() {
       setUser(data.data);
     } catch (error) {
       console.error("Gagal memuat data pengguna:", error);
-      alert("Gagal memuat data pengguna", error.message);
     }
   };
 
@@ -57,7 +64,7 @@ export default function AdminLayout() {
       setNotifications(data.data);
       setUnreadCount(data.data.filter((n) => !n.is_read).length);
     } catch (error) {
-      console.error("Error fetching notifications:", error);
+      console.error("Gagal memuat notifikasi:", error);
     } finally {
       setNotificationLoading(false);
     }
@@ -65,7 +72,7 @@ export default function AdminLayout() {
 
   useEffect(() => {
     if (token) fetchNotifications();
-  }, [token]);
+  }, [token, unreadCount]);
 
   const markAsRead = async (id) => {
     try {
@@ -84,7 +91,7 @@ export default function AdminLayout() {
       setNotifications(updated);
       setUnreadCount(updated.filter((n) => !n.is_read).length);
     } catch (error) {
-      console.error("Error marking notification as read:", error);
+      console.error("Gagal membaca notifikasi:", error);
     }
   };
 
@@ -103,7 +110,7 @@ export default function AdminLayout() {
       setNotifications(updated);
       setUnreadCount(0);
     } catch (error) {
-      console.error("Error marking all notifications as read:", error);
+      console.error("Gagal membaca semua notifikasi:", error);
     }
   };
 
@@ -118,7 +125,7 @@ export default function AdminLayout() {
       setNotifications(updated);
       setUnreadCount(updated.filter((n) => !n.is_read).length);
     } catch (error) {
-      console.error("Error deleting notification:", error);
+      console.error("Gagal menghapus notifikasi:", error);
     }
   };
 
@@ -138,11 +145,44 @@ export default function AdminLayout() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const handleLougout = () => {
-    if (window.confirm("Ingin keluar sekarang?")) {
-      localStorage.removeItem("token");
-      localStorage.removeItem("role");
-      navigate("/auth/login");
+  const handleLougout = async () => {
+    const swalRegister = await Swal.fire({
+      title: "Apakah anda yakin?",
+      text: "Anda akan keluar dari halaman ini",
+      icon: "warning",
+      position: "top",
+      showCancelButton: true,
+      confirmButtonColor: "#60a5fa",
+      cancelButtonColor: "#ef4444",
+      confirmButtonText: "Keluar",
+      cancelButtonText: "Batal",
+    });
+
+    if (swalRegister.isConfirmed) {
+      try {
+        await axiosInstance.delete("/api/users/logout", {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        localStorage.removeItem("token");
+        localStorage.removeItem("role");
+
+        Swal.fire({
+          position: "top",
+          icon: "success",
+          title: "Sukses",
+          text: "Anda berhasil keluar.",
+          showConfirmButton: false,
+          timer: 1500,
+          width: 400,
+        });
+
+        navigate("/auth/login");
+      } catch (error) {
+        console.error("Gagal melakukan logout:", error);
+      }
     }
   };
 
@@ -291,35 +331,55 @@ export default function AdminLayout() {
             <nav className="space-y-2">
               <a
                 href="/admin/dashboard"
-                className="flex items-center space-x-3 px-4 py-3 text-gray-700 hover:bg-gray-100 rounded-lg"
+                className={`flex items-center space-x-3 px-4 py-3 ${
+                  pathname === "/admin/dashboard"
+                    ? "text-blue-400"
+                    : "text-gray-500"
+                } hover:bg-gray-100 rounded-lg`}
               >
                 <LayoutDashboard className="w-5 h-5" />
                 <span>Dashboard</span>
               </a>
               <a
                 href="/admin/manage-products"
-                className="flex items-center space-x-3 px-4 py-3 text-gray-500 hover:bg-gray-100 rounded-lg"
+                className={`flex items-center space-x-3 px-4 py-3 ${
+                  pathname === "/admin/manage-products"
+                    ? "text-blue-400"
+                    : "text-gray-500"
+                } hover:bg-gray-100 rounded-lg`}
               >
                 <Package className="w-5 h-5" />
                 <span>Produk</span>
               </a>
               <a
                 href="/admin/manage-orders"
-                className="flex items-center space-x-3 px-4 py-3 text-gray-500 hover:bg-gray-100 rounded-lg"
+                className={`flex items-center space-x-3 px-4 py-3 ${
+                  pathname === "/admin/manage-orders"
+                    ? "text-blue-400"
+                    : "text-gray-500"
+                } hover:bg-gray-100 rounded-lg`}
               >
                 <FileText className="w-5 h-5" />
                 <span>Pesanan</span>
               </a>
               <a
                 href="/admin/manage-users"
-                className="flex items-center space-x-3 px-4 py-3 text-gray-500 hover:bg-gray-100 rounded-lg"
+                className={`flex items-center space-x-3 px-4 py-3 ${
+                  pathname === "/admin/manage-users"
+                    ? "text-blue-400"
+                    : "text-gray-500"
+                } hover:bg-gray-100 rounded-lg`}
               >
                 <Users className="w-5 h-5" />
                 <span>Pengguna</span>
               </a>
               <a
                 href="/admin/profile"
-                className="flex items-center space-x-3 px-4 py-3 text-gray-500 hover:bg-gray-100 rounded-lg"
+                className={`flex items-center space-x-3 px-4 py-3 ${
+                  pathname === "/admin/profile"
+                    ? "text-blue-400"
+                    : "text-gray-500"
+                } hover:bg-gray-100 rounded-lg`}
               >
                 <User className="w-5 h-5" />
                 <span>Profil</span>

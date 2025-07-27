@@ -2,6 +2,8 @@ import { useState } from "react";
 import { Eye, EyeOff } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { axiosInstance } from "../../lib/axios";
+import Swal from "sweetalert2";
+import Loader from "../../components/Loader";
 
 function RegisterPage() {
   const [name, setName] = useState("");
@@ -10,31 +12,35 @@ function RegisterPage() {
   const [phone, setPhone] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
   const handleSubmit = async () => {
     setError("");
-    setSuccess("");
-
+    setLoading(true);
     try {
-      const res = await axiosInstance.post("/api/auth/register", {
+      const { data } = await axiosInstance.post("/api/auth/register", {
         name,
         email,
         password,
         phone,
       });
 
-      // Misalnya backend mengirim pesan sukses:
-      setSuccess(res.data.message || "Registrasi berhasil! Silakan login.");
-      // Redirect otomatis (opsional):
+      Swal.fire({
+        position: "top",
+        icon: "success",
+        title: "Sukses",
+        text: data.message + "." || "Pengguna berhasil mendaftar.",
+        showConfirmButton: false,
+        timer: 1500,
+        width: 400,
+      });
       setTimeout(() => navigate("/auth/login"), 1500);
     } catch (error) {
-      console.error(
-        "Gagal mendaftarkan pengguna.",
-        error.response?.data?.errors
-      );
-      setError("Gagal mendaftarkan pengguna.", error.response?.data?.errors);
+      console.error("Gagal mendaftarkan pengguna:", error);
+      setError("Gagal mendaftarkan pengguna:", error.response?.data?.errors);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -50,9 +56,6 @@ function RegisterPage() {
         <div className="space-y-6">
           {/* Notifikasi Error atau Sukses */}
           {error && <p className="text-red-600 text-sm font-medium">{error}</p>}
-          {success && (
-            <p className="text-green-600 text-sm font-medium">{success}</p>
-          )}
 
           {/* Name Field */}
           <div>
@@ -142,9 +145,18 @@ function RegisterPage() {
           {/* Register Button */}
           <button
             onClick={handleSubmit}
+            disabled={loading}
             className="w-full bg-white hover:bg-blue-400 text-blue-400 hover:text-white ring-1 ring-blue-400 font-semibold py-3 px-6 rounded-lg transition-colors duration-200 cursor-pointer"
           >
-            Daftar
+            {loading ? (
+              <div className="flex items-center justify-center min-h-min">
+                <div className="text-center">
+                  <div className="animate-spin rounded-full h-7 w-7 border-b-2 border-blue-400 mx-auto"></div>
+                </div>
+              </div>
+            ) : (
+              "Daftar"
+            )}
           </button>
         </div>
 

@@ -11,6 +11,7 @@ import ProtectedPageUser from "../protected/ProtectedPageUser";
 import { useUnpaidOrders } from "../../context/UnpaidOrdersContext";
 import Loader from "../../components/Loader";
 import { useNavigate } from "react-router-dom";
+import Swal from "sweetalert2";
 
 function OrderPage() {
   const token = getToken();
@@ -33,7 +34,6 @@ function OrderPage() {
       setUser(data.data);
     } catch (error) {
       console.error("Gagal memuat data pengguna:", error);
-      console.log("Terjadi kesalahan saat mengambil data pengguna.");
     }
   };
 
@@ -54,7 +54,6 @@ function OrderPage() {
       setCartItems(data.data);
     } catch (error) {
       console.error("Gagal memuat keranjang belanja:", error);
-      console.log("Terjadi kesalahan saat mengambil data keranjang.");
     } finally {
       setLoadingItems(false);
     }
@@ -93,11 +92,28 @@ function OrderPage() {
         other_costs === undefined ||
         other_costs === null
       ) {
-        alert("Mohon lengkapi semua data sebelum mengirim.");
+        Swal.fire({
+          position: "top",
+          icon: "warning",
+          title: "Periksa Kembali",
+          text: "Mohon lengkapi semua data sebelum membuat pesanan!",
+          showConfirmButton: false,
+          timer: 1500,
+          width: 400,
+        });
         return;
       }
       if (shippingCost === 0) {
-        return alert("Pilih kota pengiriman terlebih dahulu.");
+        Swal.fire({
+          position: "top",
+          icon: "warning",
+          title: "Periksa Kembali",
+          text: "Pilih kota pengiriman anda terlebih dahulu!",
+          showConfirmButton: false,
+          timer: 1500,
+          width: 400,
+        });
+        return;
       }
       const { data } = await axiosInstance.post("/api/orders", payload, {
         headers: {
@@ -115,25 +131,64 @@ function OrderPage() {
         onSuccess: function (result) {
           removeUnpaidOrder(order_id);
           console.log("Pembayaran berhasil", result);
-          alert("Pembayaran berhasil!");
-          // redirect ke halaman sukses jika perlu
+          Swal.fire({
+            position: "top",
+            icon: "success",
+            title: "Sukses",
+            text: "Pembayaran berhasil.",
+            showConfirmButton: false,
+            timer: 1500,
+            width: 400,
+          });
         },
         onPending: function (result) {
           console.log("Menunggu pembayaran", result);
-          alert("Menunggu pembayaran.");
+          Swal.fire({
+            position: "top",
+            icon: "info",
+            title: "Perhatian",
+            text: "Menunggu pembayaran.",
+            showConfirmButton: false,
+            timer: 1500,
+            width: 400,
+          });
         },
         onError: function (result) {
-          console.error("Pembayaran gagal", result);
-          alert("Pembayaran gagal!");
+          console.error("Pembayaran gagal!", result);
+          Swal.fire({
+            position: "top",
+            icon: "error",
+            title: "Gagal",
+            text: "Pembayaran gagal!",
+            showConfirmButton: false,
+            timer: 1500,
+            width: 400,
+          });
         },
         onClose: function () {
           navigate("/my-order");
-          alert("Kamu menutup pop-up tanpa menyelesaikan pembayaran.");
+          Swal.fire({
+            position: "top",
+            icon: "warning",
+            title: "Hati-hati",
+            text: "Kamu menutup pop-up tanpa menyelesaikan pembayaran.",
+            showConfirmButton: false,
+            timer: 1500,
+            width: 400,
+          });
         },
       });
     } catch (error) {
+      Swal.fire({
+        position: "top",
+        icon: "error",
+        title: "Gagal",
+        text: "Gagal membuat pesanan.",
+        showConfirmButton: false,
+        timer: 1500,
+        width: 400,
+      });
       console.error("Gagal membuat pesanan:", error);
-      console.log("Terjadi kesalahan saat membuat pesanan.");
     }
   };
 
@@ -346,7 +401,7 @@ function OrderPage() {
           <div className="mt-8 flex justify-end">
             <button
               onClick={handleSubmit}
-              className="px-8 py-3 bg-blue-400 text-white font-medium rounded-lg hover:bg-blue-500 focus:ring-2 focus:ring-blue-400 focus:ring-offset-2 transition-colors"
+              className="px-8 py-3 bg-blue-400 text-white font-medium rounded-lg hover:bg-blue-500 transition-colors cursor-pointer"
             >
               Buat Pesanan
             </button>

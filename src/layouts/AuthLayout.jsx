@@ -1,7 +1,10 @@
 import { User } from "lucide-react";
-import { Link, Outlet } from "react-router-dom";
+import { Link, Outlet, useLocation } from "react-router-dom";
 
 function AuthLayout() {
+  const location = useLocation();
+  const { pathname } = location;
+
   return (
     <div className="min-h-screen bg-gray-100 flex flex-col">
       {/* Header */}
@@ -25,11 +28,11 @@ function AuthLayout() {
             Beranda
           </Link>
           <Link
-            to="/auth/register"
+            to={pathname === "/auth/login" ? "/auth/register" : "/auth/login"}
             className="flex items-center space-x-2 text-white"
           >
             <User className="w-5 h-5" />
-            <span>Daftar</span>
+            <span>{pathname === "/auth/login" ? "Daftar" : "Masuk"}</span>
           </Link>
         </div>
       </header>

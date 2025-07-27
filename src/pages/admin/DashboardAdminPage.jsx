@@ -34,7 +34,6 @@ function DashboardAdminPage() {
       setTotalUsers(data.pagination?.total_users);
     } catch (error) {
       console.error("Gagal memuat data pengguna:", error);
-      alert("Gagal memuat data pengguna", error.message);
     }
   };
 
@@ -57,7 +56,6 @@ function DashboardAdminPage() {
       setTotalOrders(data.pagination?.total_orders);
     } catch (error) {
       console.error("Gagal memuat data pesanan:", error);
-      alert("Gagal memuat data pesanan", error.message);
     } finally {
       setLoading(false);
     }
@@ -81,7 +79,6 @@ function DashboardAdminPage() {
       setTotalSuccessfulOrders(data.pagination?.total_orders);
     } catch (error) {
       console.error("Gagal memuat data pesanan selesai:", error);
-      alert("Gagal memuat data pesanan selesai", error.message);
     }
   };
 
@@ -102,7 +99,6 @@ function DashboardAdminPage() {
       setTotalFailedOrders(data.pagination?.total_orders);
     } catch (error) {
       console.error("Gagal memuat data pesanan dibatalkan:", error);
-      alert("Gagal memuat data pesanan dibatalkan", error.message);
     }
   };
 
@@ -123,7 +119,6 @@ function DashboardAdminPage() {
       setTotalWaitingOrders(data.pagination?.total_orders);
     } catch (error) {
       console.error("Gagal memuat data pesanan ditunggu:", error);
-      alert("Gagal memuat data pesanan ditunggu", error.message);
     }
   };
 
@@ -144,7 +139,6 @@ function DashboardAdminPage() {
       setPaidOrders(data.data);
     } catch (error) {
       console.error("Gagal memuat data pesanan dibayar:", error);
-      alert("Gagal memuat data pesanan dibayar", error.message);
     }
   };
 
@@ -165,7 +159,6 @@ function DashboardAdminPage() {
       setSentOrders(data.data);
     } catch (error) {
       console.error("Gagal memuat data pesanan dikirim:", error);
-      alert("Gagal memuat data pesanan dikirim", error.message);
     }
   };
 

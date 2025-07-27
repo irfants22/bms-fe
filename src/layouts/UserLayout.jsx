@@ -4,6 +4,7 @@ import { formatRelativeTime, getToken } from "../utils/helper";
 import { FaFacebook, FaInstagram, FaTwitter } from "react-icons/fa";
 import { User, Search, ShoppingCart, Bell, X, Clock } from "lucide-react";
 import { Link, Outlet, useNavigate, useSearchParams } from "react-router-dom";
+import Swal from "sweetalert2";
 
 function UserLayout() {
   const token = getToken();
@@ -39,7 +40,7 @@ function UserLayout() {
       setNotifications(data.data);
       setUnreadCount(data.data.filter((n) => !n.is_read).length);
     } catch (error) {
-      console.error("Error fetching notifications:", error);
+      console.error("Gagal memuat notifikasi:", error);
     } finally {
       setNotificationLoading(false);
     }
@@ -47,7 +48,7 @@ function UserLayout() {
 
   useEffect(() => {
     if (token) fetchNotifications();
-  }, [token]);
+  }, [token, unreadCount]);
 
   const markAsRead = async (id) => {
     try {
@@ -66,7 +67,7 @@ function UserLayout() {
       setNotifications(updated);
       setUnreadCount(updated.filter((n) => !n.is_read).length);
     } catch (error) {
-      console.error("Error marking notification as read:", error);
+      console.error("Gagal membaca notifikasi:", error);
     }
   };
 
@@ -85,7 +86,7 @@ function UserLayout() {
       setNotifications(updated);
       setUnreadCount(0);
     } catch (error) {
-      console.error("Error marking all notifications as read:", error);
+      console.error("Gagal membaca semua notifikasi:", error);
     }
   };
 
@@ -100,7 +101,7 @@ function UserLayout() {
       setNotifications(updated);
       setUnreadCount(updated.filter((n) => !n.is_read).length);
     } catch (error) {
-      console.error("Error deleting notification:", error);
+      console.error("Gagal menghapus notifikasi:", error);
     }
   };
 
@@ -120,11 +121,44 @@ function UserLayout() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const handleLougout = () => {
-    if (window.confirm("Ingin keluar sekarang?")) {
-      localStorage.removeItem("token");
-      localStorage.removeItem("role");
-      navigate("/auth/login");
+  const handleLogout = async () => {
+    const swalLogin = await Swal.fire({
+      title: "Apakah anda yakin?",
+      text: "Anda akan keluar dari halaman ini.",
+      icon: "warning",
+      position: "top",
+      showCancelButton: true,
+      confirmButtonColor: "#60a5fa",
+      cancelButtonColor: "#ef4444",
+      confirmButtonText: "Keluar",
+      cancelButtonText: "Batal",
+    });
+
+    if (swalLogin.isConfirmed) {
+      try {
+        await axiosInstance.delete("/api/users/logout", {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        localStorage.removeItem("token");
+        localStorage.removeItem("role");
+
+        Swal.fire({
+          position: "top",
+          icon: "success",
+          title: "Sukses",
+          text: "Anda berhasil keluar.",
+          showConfirmButton: false,
+          timer: 1500,
+          width: 400,
+        });
+
+        navigate("/auth/login");
+      } catch (error) {
+        console.error("Gagal melakukan logout:", error);
+      }
     }
   };
 
@@ -315,7 +349,7 @@ function UserLayout() {
                         </li>
                         <li>
                           <button
-                            onClick={handleLougout}
+                            onClick={handleLogout}
                             className="w-full text-left px-4 py-2 text-gray-700 hover:bg-gray-100 cursor-pointer"
                           >
                             Keluar

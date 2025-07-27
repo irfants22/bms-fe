@@ -64,7 +64,7 @@ function ProductPage() {
       setProducts(response.data.data);
       setPaginations(response.data.pagination);
     } catch (error) {
-      console.error("Gagal memuat produk:", error);
+      console.error("Gagal memuat data produk:", error);
     } finally {
       setLoading(false);
     }

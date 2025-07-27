@@ -18,7 +18,7 @@ function HomePage() {
       });
       setProducts(data.data);
     } catch (error) {
-      console.error("Gagal memuat produk:", error);
+      console.error("Gagal memuat data produk:", error);
     } finally {
       setLoading(false);
     }

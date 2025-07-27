@@ -17,7 +17,6 @@ function ManageOrderPage() {
   const [paidOrders, setPaidOrders] = useState([]);
   const [totalOrders, setTotalOrders] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
-  const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [loading, setLoading] = useState(false);
@@ -47,7 +46,6 @@ function ManageOrderPage() {
       setTotalPages(pages || 0);
     } catch (error) {
       console.error("Gagal memuat data pesanan:", error);
-      alert("Gagal memuat data pesanan", error.message);
     } finally {
       setLoading(false);
     }
@@ -72,7 +70,6 @@ function ManageOrderPage() {
       setPaidOrders(data.data);
     } catch (error) {
       console.error("Gagal memuat data pesanan:", error);
-      alert("Gagal memuat data pesanan", error.message);
     } finally {
       setLoading(false);
     }

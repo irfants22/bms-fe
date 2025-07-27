@@ -1,10 +1,9 @@
 import { useEffect, useState } from "react";
 import {
   User,
-  Phone,
   Clock,
+  Phone,
   MapPin,
-  Package,
   ArrowLeft,
   CreditCard,
 } from "lucide-react";
@@ -17,21 +16,24 @@ import {
 } from "../../utils/helper";
 import { axiosInstance } from "../../lib/axios";
 import { useNavigate, useParams } from "react-router-dom";
-import ProtectedPageAdmin from "../protected/ProtectedPageAdmin";
+import ProtectedPageUser from "../protected/ProtectedPageUser";
+import { useUnpaidOrders } from "../../context/UnpaidOrdersContext";
+import Swal from "sweetalert2";
 
-function OrderDetailAdmin() {
+function OrderDetailUserPage() {
   const token = getToken();
   const [order, setOrder] = useState({});
   const [orderItems, setOrderItems] = useState([]);
   const { orderId } = useParams();
-  const [loading, setLoading] = useState({});
+  const [loading, setLoading] = useState(false);
   const allowPaymentInformation = ["DIBAYAR", "DIKIRIM", "SELESAI"];
+  const { removeUnpaidOrder } = useUnpaidOrders();
   const navigate = useNavigate();
 
   const fetchOrderDetail = async () => {
     setLoading(true);
     try {
-      const { data } = await axiosInstance.get(`/api/admin/orders/${orderId}`, {
+      const { data } = await axiosInstance.get(`/api/orders/${orderId}`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -40,7 +42,6 @@ function OrderDetailAdmin() {
       setOrderItems(data.data.order_items);
     } catch (error) {
       console.error("Gagal memuat data pesanan:", error);
-      alert("Gagal memuat data pesanan", error.message);
     } finally {
       setLoading(false);
     }
@@ -54,13 +55,24 @@ function OrderDetailAdmin() {
     navigate(-1);
   };
 
-  const handleSendOrder = async () => {
+  const handleSuccessfulOrder = async () => {
     try {
-      const token = getToken("token");
-      if (window.confirm(`Apakah anda ingin mengirim pesanan #${orderId}`)) {
+      const swalConfirmOrder = await Swal.fire({
+        title: "Konfirmasi",
+        text: "Anda yakin untuk menyelesaikan pesanan anda?",
+        icon: "question",
+        position: "top",
+        showCancelButton: true,
+        confirmButtonColor: "#60a5fa",
+        cancelButtonColor: "#ef4444",
+        confirmButtonText: "Yakin",
+        cancelButtonText: "Batal",
+      });
+
+      if (swalConfirmOrder.isConfirmed) {
         await axiosInstance.put(
-          `/api/admin/orders/${orderId}/status`,
-          { status: "DIKIRIM" },
+          `/api/orders/${orderId}/status`,
+          { status: "SELESAI" },
           {
             headers: {
               "Content-Type": "application/json",
@@ -68,20 +80,211 @@ function OrderDetailAdmin() {
             },
           }
         );
+
+        Swal.fire({
+          position: "top",
+          icon: "success",
+          title: "Sukses",
+          text: "Pesanan anda telah selesai.",
+          showConfirmButton: false,
+          timer: 1500,
+          width: 400,
+        });
+
+        navigate("/my-order");
       }
-      navigate("/admin/manage-orders");
-      alert("Pesan telah dikirim");
     } catch (error) {
+      Swal.fire({
+        position: "top",
+        icon: "error",
+        title: "Gagal",
+        text: "Gagal memperbarui status pesanan.",
+        showConfirmButton: false,
+        timer: 1500,
+        width: 400,
+      });
       console.error("Gagal memperbarui status pesanan:", error);
-      alert(
-        "Gagal memperbarui status pesanan:",
-        error.response.message || error.response.data.errors
-      );
     }
   };
 
+  const handleCancelOrder = async () => {
+    try {
+      const swalCancelOrder = await Swal.fire({
+        title: "Konfirmasi",
+        text: "Anda yakin untuk membatalkan pesanan anda?",
+        icon: "question",
+        position: "top",
+        showCancelButton: true,
+        confirmButtonColor: "#60a5fa",
+        cancelButtonColor: "#ef4444",
+        confirmButtonText: "Yakin",
+        cancelButtonText: "Batal",
+      });
+
+      if (swalCancelOrder.isConfirmed) {
+        await axiosInstance.put(
+          `/api/orders/${orderId}/status`,
+          { status: "DIBATALKAN" },
+          {
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        );
+
+        Swal.fire({
+          position: "top",
+          icon: "success",
+          title: "Sukses",
+          text: "Pesanan anda telah dibatalkan.",
+          showConfirmButton: false,
+          timer: 1500,
+          width: 400,
+        });
+
+        navigate("/my-order");
+      }
+    } catch (error) {
+      Swal.fire({
+        position: "top",
+        icon: "error",
+        title: "Gagal",
+        text: "Gagal memperbarui status pesanan.",
+        showConfirmButton: false,
+        timer: 1500,
+        width: 400,
+      });
+      console.error("Gagal memperbarui status pesanan:", error);
+    }
+  };
+
+  const handlePayNow = async () => {
+    if (!window.snap) {
+      Swal.fire({
+        position: "top",
+        icon: "info",
+        title: "Perhatian",
+        text: "Payment gateway sedang dibuat, silakan coba lagi dalam beberapa detik.",
+        showConfirmButton: false,
+        timer: 1500,
+        width: 400,
+      });
+      return;
+    }
+    try {
+      const stored = localStorage.getItem("unpaidOrders");
+      const unpaidOrders = stored ? JSON.parse(stored) : [];
+      const unpaid = unpaidOrders.find((order) => order.order_id === orderId);
+
+      if (!unpaid) {
+        Swal.fire({
+          position: "top",
+          icon: "info",
+          title: "Perhatian",
+          text: "Data pembayaran tidak ditemukan. Silakan periksa kembali pesanan anda.",
+          showConfirmButton: false,
+          timer: 1500,
+          width: 400,
+        });
+        return;
+      }
+
+      const swalOrderPayment = await Swal.fire({
+        title: "Konfirmasi",
+        text: "Apakah anda ingin melakukan pembayaran sekarang?",
+        icon: "question",
+        position: "top",
+        showCancelButton: true,
+        confirmButtonColor: "#60a5fa",
+        cancelButtonColor: "#ef4444",
+        confirmButtonText: "Bayar Sekarang",
+        cancelButtonText: "Batal",
+      });
+
+      if (swalOrderPayment.isConfirmed) {
+        window.snap.pay(unpaid.snap_token, {
+          onSuccess: function (result) {
+            removeUnpaidOrder(orderId);
+            console.log("Pembayaran berhasil", result);
+            Swal.fire({
+              position: "top",
+              icon: "success",
+              title: "Sukses",
+              text: "Pembayaran berhasil.",
+              showConfirmButton: false,
+              timer: 1500,
+              width: 400,
+            });
+          },
+          onPending: function (result) {
+            console.log("Menunggu pembayaran", result);
+            Swal.fire({
+              position: "top",
+              icon: "info",
+              title: "Perhatian",
+              text: "Menunggu pembayaran.",
+              showConfirmButton: false,
+              timer: 1500,
+              width: 400,
+            });
+          },
+          onError: function (result) {
+            console.error("Pembayaran gagal!", result);
+            Swal.fire({
+              position: "top",
+              icon: "error",
+              title: "Gagal",
+              text: "Pembayaran gagal!",
+              showConfirmButton: false,
+              timer: 1500,
+              width: 400,
+            });
+          },
+          onClose: function () {
+            Swal.fire({
+              position: "top",
+              icon: "warning",
+              title: "Hati-hati",
+              text: "Kamu menutup pop-up tanpa menyelesaikan pembayaran.",
+              showConfirmButton: false,
+              timer: 1500,
+              width: 400,
+            });
+          },
+        });
+      }
+    } catch (error) {
+      Swal.fire({
+        position: "top",
+        icon: "error",
+        title: "Gagal",
+        text: "Terjadi kesalahan saat memproses pembayaran.",
+        showConfirmButton: false,
+        timer: 1500,
+        width: 400,
+      });
+      console.error("Terjadi kesalahan saat memproses pembayaran:", error);
+    }
+  };
+
+  useEffect(() => {
+    const midtransScriptUrl = "https://app.sandbox.midtrans.com/snap/snap.js";
+    const clientKey = "SB-Mid-client-ODf6Ipmxtk6_ylSy";
+
+    const script = document.createElement("script");
+    script.src = midtransScriptUrl;
+    script.setAttribute("data-client-key", clientKey);
+    script.async = true;
+
+    document.body.appendChild(script);
+    return () => {
+      document.body.removeChild(script);
+    };
+  }, []);
+
   return (
-    <ProtectedPageAdmin>
+    <ProtectedPageUser>
       <div className="min-h-screen bg-gray-50">
         {/* Header */}
         <div className="bg-white shadow-sm">
@@ -249,21 +452,35 @@ function OrderDetailAdmin() {
           </div>
 
           {/* Action Button */}
-          {order?.status === "DIBAYAR" && (
+          {order?.status === "DIKIRIM" ? (
             <div className="flex justify-end">
               <button
-                onClick={handleSendOrder}
+                onClick={handleSuccessfulOrder}
                 className="px-5 py-3 bg-blue-500 hover:bg-blue-600 text-white font-medium rounded-lg transition-colors flex items-center space-x-2 cursor-pointer"
               >
-                <Package className="w-5 h-5" />
-                <span>Kirim Pesanan</span>
+                <span>Konfirmasi Pesanan</span>
               </button>
             </div>
-          )}
+          ) : order?.status === "DIPROSES" ? (
+            <div className="flex justify-end space-x-3">
+              <button
+                onClick={handleCancelOrder}
+                className="px-5 py-3 bg-gray-500 hover:bg-gray-600 text-white font-medium rounded-lg transition-colors flex items-center space-x-2 cursor-pointer"
+              >
+                <span>Batalkan Pesanan</span>
+              </button>
+              <button
+                onClick={handlePayNow}
+                className="px-5 py-3 bg-blue-500 hover:bg-blue-600 text-white font-medium rounded-lg transition-colors flex items-center space-x-2 cursor-pointer"
+              >
+                <span>Bayar Sekarang</span>
+              </button>
+            </div>
+          ) : null}
         </div>
       </div>
-    </ProtectedPageAdmin>
+    </ProtectedPageUser>
   );
 }
 
-export default OrderDetailAdmin;
+export default OrderDetailUserPage;

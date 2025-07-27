@@ -7,7 +7,7 @@ import {
   formatWeight,
   calculateTotalPrice,
 } from "../../utils/helper";
-import { Link, useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import ProtectedPageUser from "../protected/ProtectedPageUser";
 import Loader from "../../components/Loader";
 
@@ -29,7 +29,6 @@ function CartPage() {
       setCartItems(data.data);
     } catch (error) {
       console.error("Gagal memuat keranjang belanja:", error);
-      console.log("Gagal memuat keranjang belanja.", error);
     } finally {
       setLoading(false);
     }

@@ -9,6 +9,7 @@ import {
 } from "../../utils/helper";
 import { useNavigate, useParams } from "react-router-dom";
 import Loader from "../../components/Loader";
+import Swal from "sweetalert2";
 
 function ProductDetailPage() {
   const token = getToken();
@@ -25,7 +26,7 @@ function ProductDetailPage() {
       const { data } = await axiosInstance.get(`/api/products/${productId}`);
       setProduct(data.data);
     } catch (error) {
-      console.error("Gagal memuat produk:", error);
+      console.error("Gagal memuat data produk:", error);
     } finally {
       setLoading(false);
     }
@@ -33,7 +34,16 @@ function ProductDetailPage() {
 
   const handleCheckout = async () => {
     if (!token) {
-      alert("Anda harus login terlebih dahulu untuk melakukan checkout");
+      Swal.fire({
+        position: "top",
+        icon: "warning",
+        title: "Peringatan!",
+        text: "Anda perlu login untuk melakukan checkout!",
+        showConfirmButton: false,
+        width: 400,
+        timer: 1500,
+      });
+
       return;
     }
 
@@ -46,7 +56,16 @@ function ProductDetailPage() {
 
       if (payload.product_id && payload.quantity && payload.price) {
         if (selectedPackage === false) {
-          return alert("Pilih kemasan produk yang ingin dipesan");
+          Swal.fire({
+            position: "top",
+            icon: "warning",
+            title: "Periksa Kembali",
+            text: "Pilih kemasan produk yang ingin dicheckout!",
+            showConfirmButton: false,
+            width: 400,
+            timer: 1500,
+          });
+          return;
         }
 
         await axiosInstance.post("/api/carts", payload, {
@@ -57,11 +76,18 @@ function ProductDetailPage() {
         });
       }
 
-      alert("Berhasil menambahkan produk ke keranjang belanja");
+      Swal.fire({
+        position: "top",
+        icon: "success",
+        title: "Sukses",
+        text: "Berhasil menambahkan produk ke keranjang belanja.",
+        showConfirmButton: false,
+        timer: 1500,
+        width: 400,
+      });
       navigate("/cart");
     } catch (error) {
-      console.error("Gagal menambahkan ke keranjang:", error);
-      alert("Gagal menambahkan produk ke keranjang");
+      console.error("Gagal menambahkan produk ke keranjang:", error);
     }
   };
 
@@ -148,7 +174,7 @@ function ProductDetailPage() {
             <div className="flex items-center space-x-3">
               <button
                 onClick={() => setSelectedPackage(!selectedPackage)}
-                className={`px-4 py-2 rounded-lg border font-medium transition-colors ${
+                className={`px-4 py-2 rounded-lg border font-medium transition-colors cursor-pointer ${
                   selectedPackage === true
                     ? "bg-blue-400 text-white border-blue-400"
                     : "bg-gray-200 text-gray-700 border-gray-300 hover:bg-gray-300"
@@ -163,7 +189,7 @@ function ProductDetailPage() {
           {/* Checkout Button */}
           <div className="pt-4">
             <button
-              className="bg-blue-400 text-white px-8 py-3 rounded-lg font-medium hover:text-blue-400 hover:bg-white hover:ring-1 hover:ring-blue-400 transition-colors"
+              className="bg-blue-400 text-white px-8 py-3 rounded-lg font-medium hover:bg-blue-500 transition-colors cursor-pointer"
               onClick={() => handleCheckout()}
             >
               Checkout

@@ -2,16 +2,30 @@ import { useState } from "react";
 import { Eye, EyeOff } from "lucide-react";
 import { axiosInstance } from "../../lib/axios";
 import { Link, useNavigate } from "react-router-dom";
+import Swal from "sweetalert2";
+import { transformLoginError } from "../../utils/helper";
 
 function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [errors, setErrors] = useState({
+    email: false,
+    emailMsgError: "",
+    password: false,
+    passwordMsgError: "",
+  });
   const navigate = useNavigate();
 
   const handleSubmit = async () => {
-    setError("");
+    setLoading(true);
+    setErrors({
+      email: false,
+      emailMsgError: "",
+      password: false,
+      passwordMsgError: "",
+    });
 
     try {
       const { data } = await axiosInstance.post(
@@ -27,25 +41,41 @@ function LoginPage() {
         }
       );
 
-      const { token } = data.data;
-      if (!token) {
-        throw new Error("Token tidak ditemukan dalam respons");
-      }
-      localStorage.setItem("token", token);
+      const { token, is_admin } = data.data;
 
-      const { is_admin } = data.data;
+      localStorage.setItem("token", token);
       localStorage.setItem("role", is_admin);
+
       if (is_admin) {
+        Swal.fire({
+          position: "top",
+          icon: "success",
+          title: "Sukses",
+          text: "Anda berhasil masuk.",
+          showConfirmButton: false,
+          timer: 1500,
+          width: 400,
+        });
         return navigate("/admin/dashboard");
       }
+
+      Swal.fire({
+        position: "top",
+        icon: "success",
+        title: "Sukses",
+        text: "Anda berhasil masuk.",
+        showConfirmButton: false,
+        timer: 1500,
+        width: 400,
+      });
       navigate("/");
-    } catch (err) {
-      if (err) {
-        const message = err.response?.data?.errors || "Login gagal";
-        setError(message);
-      } else {
-        setError("Terjadi kesalahan saat login");
+    } catch (error) {
+      if (error) {
+        const message = error.response?.data?.errors;
+        setErrors(transformLoginError(message));
       }
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -61,8 +91,6 @@ function LoginPage() {
 
         {/* Form Login */}
         <div className="space-y-6">
-          {error && <p className="text-red-600 text-sm font-medium">{error}</p>}
-
           {/* Email */}
           <div>
             <label
@@ -79,6 +107,11 @@ function LoginPage() {
               placeholder="user@mail.com"
               className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-400 focus:border-transparent outline-none transition-colors"
             />
+            {errors.email && (
+              <p className="text-red-600 text-sm font-medium mt-2">
+                {errors.emailMsgError}
+              </p>
+            )}
           </div>
 
           {/* Password */}
@@ -98,10 +131,17 @@ function LoginPage() {
                 placeholder="••••••••"
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-400 focus:border-transparent outline-none transition-colors pr-12"
               />
+              {errors.password && (
+                <p className="text-red-600 text-sm font-medium mt-2">
+                  {errors.passwordMsgError}
+                </p>
+              )}
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                className={`absolute right-3 ${
+                  errors.password ? "top-1/3" : "top-1/2"
+                } transform -translate-y-1/2 text-gray-500 hover:text-gray-700`}
               >
                 {showPassword ? (
                   <EyeOff className="w-5 h-5" />
@@ -115,9 +155,18 @@ function LoginPage() {
           {/* Tombol Login */}
           <button
             onClick={handleSubmit}
+            disabled={loading}
             className="w-full bg-white hover:bg-blue-400 text-blue-400 hover:text-white ring-1 ring-blue-400 font-semibold py-3 px-6 rounded-lg transition-colors duration-200 cursor-pointer"
           >
-            Masuk
+            {loading ? (
+              <div className="flex items-center justify-center min-h-min">
+                <div className="text-center">
+                  <div className="animate-spin rounded-full h-7 w-7 border-b-2 border-blue-400 mx-auto"></div>
+                </div>
+              </div>
+            ) : (
+              "Masuk"
+            )}
           </button>
         </div>
 

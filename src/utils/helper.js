@@ -112,3 +112,49 @@ export function formatRelativeTime(date) {
     locale: id,
   });
 }
+
+export const transformLoginError = (errorMessage) => {
+  const errors = {
+    email: false,
+    emailMsgError: "",
+    password: false,
+    passwordMsgError: "",
+  };
+
+  let message = errorMessage.toLowerCase();
+
+  const isEmailErrorExist = message.includes("email");
+  const isPasswordErrorExist = message.includes("password");
+
+  if (isEmailErrorExist) {
+    errors.email = true;
+  }
+  if (isPasswordErrorExist) {
+    errors.password = true;
+  }
+
+  const isEmailvalid = message.includes('"email" must be a valid email');
+  const isEmailEmpty = message.includes('"email" is not allowed to be empty');
+  const isPasswordEmpty = message.includes(
+    '"password" is not allowed to be empty'
+  );
+
+  if (isEmailvalid) {
+    errors.emailMsgError = "Email harus berupa email yang valid";
+  }
+
+  if (isEmailEmpty) {
+    errors.emailMsgError = "Email tidak boleh kosong";
+  }
+
+  if (isPasswordEmpty) {
+    errors.passwordMsgError = "Password tidak boleh kosong";
+  }
+
+  if (!isEmailvalid && !isEmailEmpty && !isPasswordEmpty) {
+    errors.emailMsgError = "Email atau password salah";
+    errors.passwordMsgError = "Email atau password salah";
+  }
+
+  return errors;
+};

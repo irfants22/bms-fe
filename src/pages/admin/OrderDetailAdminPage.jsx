@@ -1,9 +1,10 @@
 import { useEffect, useState } from "react";
 import {
   User,
-  Clock,
   Phone,
+  Clock,
   MapPin,
+  Package,
   ArrowLeft,
   CreditCard,
 } from "lucide-react";
@@ -16,23 +17,22 @@ import {
 } from "../../utils/helper";
 import { axiosInstance } from "../../lib/axios";
 import { useNavigate, useParams } from "react-router-dom";
-import ProtectedPageUser from "../protected/ProtectedPageUser";
-import { useUnpaidOrders } from "../../context/UnpaidOrdersContext";
+import ProtectedPageAdmin from "../protected/ProtectedPageAdmin";
+import Swal from "sweetalert2";
 
-function OrderDetailUser() {
+function OrderDetailAdminPage() {
   const token = getToken();
   const [order, setOrder] = useState({});
   const [orderItems, setOrderItems] = useState([]);
   const { orderId } = useParams();
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState({});
   const allowPaymentInformation = ["DIBAYAR", "DIKIRIM", "SELESAI"];
-  const { removeUnpaidOrder } = useUnpaidOrders();
   const navigate = useNavigate();
 
   const fetchOrderDetail = async () => {
     setLoading(true);
     try {
-      const { data } = await axiosInstance.get(`/api/orders/${orderId}`, {
+      const { data } = await axiosInstance.get(`/api/admin/orders/${orderId}`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -41,7 +41,6 @@ function OrderDetailUser() {
       setOrderItems(data.data.order_items);
     } catch (error) {
       console.error("Gagal memuat data pesanan:", error);
-      alert("Gagal memuat data pesanan", error.message);
     } finally {
       setLoading(false);
     }
@@ -55,12 +54,24 @@ function OrderDetailUser() {
     navigate(-1);
   };
 
-  const handleSuccessfulOrder = async () => {
+  const handleSendOrder = async () => {
     try {
-      if (window.confirm("Konfirmasi pesanan sekarang?")) {
+      const swalSendOrder = await Swal.fire({
+        title: "Konfirmasi",
+        text: `Anda yakin ingin mengirim pesanan #${orderId}?`,
+        icon: "question",
+        position: "top",
+        showCancelButton: true,
+        confirmButtonColor: "#60a5fa",
+        cancelButtonColor: "#ef4444",
+        confirmButtonText: "Kirim",
+        cancelButtonText: "Batal",
+      });
+
+      if (swalSendOrder.isConfirmed) {
         await axiosInstance.put(
-          `/api/orders/${orderId}/status`,
-          { status: "SELESAI" },
+          `/api/admin/orders/${orderId}/status`,
+          { status: "DIKIRIM" },
           {
             headers: {
               "Content-Type": "application/json",
@@ -68,105 +79,26 @@ function OrderDetailUser() {
             },
           }
         );
-      }
-      navigate("/my-order");
-      alert("Pesanan telah dikonfirmasi");
-    } catch (error) {
-      console.error("Gagal memperbarui status pesanan:", error);
-      alert(
-        "Gagal memperbarui status pesanan:",
-        error.response.message || error.response.data.errors
-      );
-    }
-  };
 
-  const handleFailedOrder = async () => {
-    try {
-      if (window.confirm("Yakin ingin membatalkan pesanan?")) {
-        await axiosInstance.put(
-          `/api/orders/${orderId}/status`,
-          { status: "DIBATALKAN" },
-          {
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${token}`,
-            },
-          }
-        );
-      }
-      navigate("/my-order");
-      alert("Pesanan telah dibatalkan");
-    } catch (error) {
-      console.error("Gagal memperbarui status pesanan:", error);
-      alert(
-        "Gagal memperbarui status pesanan:",
-        error.response.message || error.response.data.errors
-      );
-    }
-  };
-
-  const handlePayNow = async () => {
-    if (!window.snap) {
-      alert(
-        "Payment gateway sedang dibuat, silakan coba lagi dalam beberapa detik"
-      );
-      return;
-    }
-    try {
-      const stored = localStorage.getItem("unpaidOrders");
-      const unpaidOrders = stored ? JSON.parse(stored) : [];
-      const unpaid = unpaidOrders.find((order) => order.order_id === orderId);
-
-      if (!unpaid) {
-        alert(
-          "Data pembayaran tidak ditemukan. Silakan periksa kembali pesanan anda."
-        );
-        return;
-      }
-
-      if (window.confirm("Apakah anda ingin melakukan pembayaran sekarang?")) {
-        window.snap.pay(unpaid.snap_token, {
-          onSuccess: function (result) {
-            removeUnpaidOrder(orderId);
-            console.log("Pembayaran berhasil", result);
-            alert("Pembayaran berhasil!");
-          },
-          onPending: function (result) {
-            console.log("Menunggu pembayaran", result);
-            alert("Menunggu pembayaran.");
-          },
-          onError: function (result) {
-            console.error("Pembayaran gagal", result);
-            alert("Pembayaran gagal!");
-          },
-          onClose: function () {
-            alert("Kamu menutup pop-up tanpa menyelesaikan pembayaran.");
-          },
+        Swal.fire({
+          position: "top",
+          icon: "success",
+          title: "Sukses",
+          text: "Pesanan telah dikirim.",
+          showConfirmButton: false,
+          timer: 1500,
+          width: 400,
         });
+
+        navigate("/admin/manage-orders");
       }
     } catch (error) {
-      console.error("Error handling payment:", error);
-      alert("Terjadi kesalahan saat memproses pembayaran.");
+      console.error("Gagal memperbarui status pesanan:", error);
     }
   };
-
-  useEffect(() => {
-    const midtransScriptUrl = "https://app.sandbox.midtrans.com/snap/snap.js";
-    const clientKey = "SB-Mid-client-ODf6Ipmxtk6_ylSy";
-
-    const script = document.createElement("script");
-    script.src = midtransScriptUrl;
-    script.setAttribute("data-client-key", clientKey);
-    script.async = true;
-
-    document.body.appendChild(script);
-    return () => {
-      document.body.removeChild(script);
-    };
-  }, []);
 
   return (
-    <ProtectedPageUser>
+    <ProtectedPageAdmin>
       <div className="min-h-screen bg-gray-50">
         {/* Header */}
         <div className="bg-white shadow-sm">
@@ -334,35 +266,21 @@ function OrderDetailUser() {
           </div>
 
           {/* Action Button */}
-          {order?.status === "DIKIRIM" ? (
+          {order?.status === "DIBAYAR" && (
             <div className="flex justify-end">
               <button
-                onClick={handleSuccessfulOrder}
+                onClick={handleSendOrder}
                 className="px-5 py-3 bg-blue-500 hover:bg-blue-600 text-white font-medium rounded-lg transition-colors flex items-center space-x-2 cursor-pointer"
               >
-                <span>Konfirmasi Pesanan</span>
+                <Package className="w-5 h-5" />
+                <span>Kirim Pesanan</span>
               </button>
             </div>
-          ) : order?.status === "DIPROSES" ? (
-            <div className="flex justify-end space-x-3">
-              <button
-                onClick={handleFailedOrder}
-                className="px-5 py-3 bg-gray-500 hover:bg-gray-600 text-white font-medium rounded-lg transition-colors flex items-center space-x-2 cursor-pointer"
-              >
-                <span>Batalkan Pesanan</span>
-              </button>
-              <button
-                onClick={handlePayNow}
-                className="px-5 py-3 bg-blue-500 hover:bg-blue-600 text-white font-medium rounded-lg transition-colors flex items-center space-x-2 cursor-pointer"
-              >
-                <span>Bayar Sekarang</span>
-              </button>
-            </div>
-          ) : null}
+          )}
         </div>
       </div>
-    </ProtectedPageUser>
+    </ProtectedPageAdmin>
   );
 }
 
-export default OrderDetailUser;
+export default OrderDetailAdminPage;

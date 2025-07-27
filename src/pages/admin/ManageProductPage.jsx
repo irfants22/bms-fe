@@ -9,6 +9,7 @@ import {
 } from "../../utils/helper";
 import ProtectedPageAdmin from "../protected/ProtectedPageAdmin";
 import Loader from "../../components/Loader";
+import Swal from "sweetalert2";
 
 function ManageProductPage() {
   const token = getToken();
@@ -59,7 +60,6 @@ function ManageProductPage() {
       setTotalPages(pages || 0);
     } catch (error) {
       console.error("Gagal memuat data produk:", error);
-      alert("Gagal memuat data produk", error.message);
     } finally {
       setLoading(false);
     }
@@ -75,7 +75,6 @@ function ManageProductPage() {
       setProductDetail(data.data);
     } catch (error) {
       console.error("Gagal memuat data produk:", error);
-      alert("Gagal memuat data produk", error);
     }
   };
 
@@ -102,12 +101,28 @@ function ManageProductPage() {
         "image/gif",
       ];
       if (!allowedTypes.includes(file.type)) {
-        alert("Tipe file tidak didukung. Gunakan JPEG, PNG, atau GIF.");
+        Swal.fire({
+          position: "top",
+          icon: "warning",
+          title: "Periksa Kembali",
+          text: "Tipe file tidak didukung. Gunakan JPEG, PNG, atau GIF.",
+          showConfirmButton: false,
+          timer: 1500,
+          width: 400,
+        });
         return;
       }
       // Validasi ukuran file (maksimal 5MB)
       if (file.size > 5 * 1024 * 1024) {
-        alert("Ukuran file terlalu besar. Maksimal 5MB.");
+        Swal.fire({
+          position: "top",
+          icon: "warning",
+          title: "Periksa Kembali",
+          text: "Ukuran file terlalu besar. Maksimal 5MB.",
+          showConfirmButton: false,
+          timer: 1500,
+          width: 400,
+        });
         return;
       }
       setFormData((prev) => ({
@@ -164,18 +179,37 @@ function ManageProductPage() {
   };
 
   const handleDeleteProduct = async (productId) => {
-    if (window.confirm("Apakah Anda yakin ingin menghapus produk ini?")) {
+    const swalDeleteProduct = await Swal.fire({
+      title: "Konfirmasi",
+      text: "Apakah Anda yakin ingin menghapus produk ini?",
+      icon: "question",
+      position: "top",
+      showCancelButton: true,
+      confirmButtonColor: "#60a5fa",
+      cancelButtonColor: "#ef4444",
+      confirmButtonText: "Yakin",
+      cancelButtonText: "Batal",
+    });
+
+    if (swalDeleteProduct.isConfirmed) {
       try {
         await axiosInstance.delete(`/api/admin/products/${productId}`, {
           headers: {
             Authorization: `Bearer ${token}`,
           },
         });
-        alert("Produk berhasil dihapus!");
+        Swal.fire({
+          position: "top",
+          icon: "success",
+          title: "Sukses",
+          text: "Produk berhasil dihapus.",
+          showConfirmButton: false,
+          timer: 1500,
+          width: 400,
+        });
         await fetchProducts(searchTerm, itemsPerPage, currentPage);
       } catch (error) {
         console.error("Gagal menghapus produk:", error);
-        alert("Gagal menghapus produk");
       }
     }
   };
@@ -223,11 +257,18 @@ function ManageProductPage() {
         setShowModalCreate(false);
         // Refresh data produk
         await fetchProducts(searchTerm, itemsPerPage, currentPage);
-        alert("Produk berhasil ditambahkan!");
+        Swal.fire({
+          position: "top",
+          icon: "success",
+          title: "Sukses",
+          text: "Produk berhasil ditambahkan.",
+          showConfirmButton: false,
+          timer: 1500,
+          width: 400,
+        });
       }
     } catch (error) {
-      console.error("Gagal saat menambahkan produk:", error);
-      alert("Gagal saat menambahkan produk:", error.message);
+      console.error("Gagal menambahkan produk:", error);
     } finally {
       setSubmitLoading(false);
     }
@@ -288,11 +329,18 @@ function ManageProductPage() {
         setShowModalCreate(false);
         // Refresh data produk
         await fetchProducts(searchTerm, itemsPerPage, currentPage);
-        alert("Produk berhasil diperbarui!");
+        Swal.fire({
+          position: "top",
+          icon: "success",
+          title: "Sukses",
+          text: "Produk berhasil diperbarui.",
+          showConfirmButton: false,
+          timer: 1500,
+          width: 400,
+        });
       }
     } catch (error) {
-      console.error("Gagal saat memperbarui produk:", error);
-      alert(error.response?.data?.message || "Gagal saat memperbarui produk");
+      console.error("Gagal memperbarui produk:", error);
     } finally {
       setSubmitLoading(false);
     }
@@ -712,17 +760,26 @@ function ManageProductPage() {
                   <button
                     type="button"
                     onClick={() => setShowModalCreate(false)}
-                    className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-100 cursor-pointer"
+                    className="flex items-center space-x-2 bg-gray-400 hover:bg-gray-500 text-white px-4 py-2 rounded-lg transition-colors disabled:opacity-50 cursor-pointer"
                     disabled={submitLoading}
                   >
-                    Batal
+                    <span>Batal</span>
                   </button>
                   <button
                     type="submit"
-                    className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-50 cursor-pointer"
+                    className="flex items-center space-x-2 bg-blue-400 hover:bg-blue-500 text-white px-4 py-2 rounded-lg transition-colors disabled:opacity-50 cursor-pointer"
                     disabled={submitLoading}
                   >
-                    {submitLoading ? "Menyimpan..." : "Tambah"}
+                    {submitLoading ? (
+                      <>
+                        <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
+                        <span>Menyimpan...</span>
+                      </>
+                    ) : (
+                      <>
+                        <span>Tambah</span>
+                      </>
+                    )}
                   </button>
                 </div>
               </form>
@@ -868,7 +925,7 @@ function ManageProductPage() {
                       type="number"
                       name="stock"
                       value={formData.stock}
-                      placeholder={productDetail?.stock}
+                      placeholder={`Tambah jumlah stok`}
                       onChange={handleInputChange}
                       className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
@@ -911,17 +968,26 @@ function ManageProductPage() {
                   <button
                     type="button"
                     onClick={() => setShowModalUpdate(false)}
-                    className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-100 cursor-pointer"
+                    className="flex items-center space-x-2 bg-gray-400 hover:bg-gray-500 text-white px-4 py-2 rounded-lg transition-colors disabled:opacity-50 cursor-pointer"
                     disabled={submitLoading}
                   >
-                    Batal
+                    <span>Batal</span>
                   </button>
                   <button
                     type="submit"
-                    className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-50 cursor-pointer"
+                    className="flex items-center space-x-2 bg-blue-400 hover:bg-blue-500 text-white px-4 py-2 rounded-lg transition-colors disabled:opacity-50 cursor-pointer"
                     disabled={submitLoading}
                   >
-                    {submitLoading ? "Menyimpan..." : "Perbarui"}
+                    {submitLoading ? (
+                      <>
+                        <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
+                        <span>Menyimpan...</span>
+                      </>
+                    ) : (
+                      <>
+                        <span>Perbarui</span>
+                      </>
+                    )}
                   </button>
                 </div>
               </form>

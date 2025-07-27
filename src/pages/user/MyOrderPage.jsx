@@ -41,7 +41,6 @@ function MyOrderPage() {
       setOrders(data.data);
     } catch (error) {
       console.error("Gagal memuat data pesanan:", error);
-      alert("Gagal memuat data pesanan", error.message);
     } finally {
       setLoading(false);
     }

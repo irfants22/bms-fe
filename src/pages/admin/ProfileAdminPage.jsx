@@ -3,6 +3,7 @@ import { axiosInstance } from "../../lib/axios";
 import { useState, useEffect, useRef } from "react";
 import { Camera, User, Save, X, Edit3 } from "lucide-react";
 import ProtectedPageAdmin from "../protected/ProtectedPageAdmin";
+import Swal from "sweetalert2";
 
 function ProfileAdminPage() {
   const token = getToken();
@@ -38,8 +39,7 @@ function ProfileAdminPage() {
         setPreviewImage(data.data.image);
       }
     } catch (error) {
-      console.error("Error fetching profile:", error);
-      alert("Gagal memuat data profil");
+      console.error("Gagal memuat data pengguna:", error);
     } finally {
       setLoading(false);
     }
@@ -64,12 +64,28 @@ function ProfileAdminPage() {
     if (file) {
       // Validate file type
       if (!file.type.startsWith("image/")) {
-        alert("Pilih file gambar yang valid");
+        Swal.fire({
+          position: "top",
+          icon: "warning",
+          title: "Periksa Kembali",
+          text: "Pilih file gambar yang valid.",
+          showConfirmButton: false,
+          timer: 1500,
+          width: 400,
+        });
         return;
       }
       // Validate file size (max 5MB)
       if (file.size > 5 * 1024 * 1024) {
-        alert("Ukuran gambar maksimal 5MB");
+        Swal.fire({
+          position: "top",
+          icon: "warning",
+          title: "Periksa Kembali",
+          text: "Ukuran gambar maksimal 5MB.",
+          showConfirmButton: false,
+          timer: 1500,
+          width: 400,
+        });
         return;
       }
 
@@ -133,10 +149,17 @@ function ProfileAdminPage() {
         setPreviewImage(data.data.image);
       }
 
-      alert("Profil berhasil diperbarui");
+      Swal.fire({
+        position: "top",
+        icon: "success",
+        title: "Sukses",
+        text: "Profil berhasil diperbarui.",
+        showConfirmButton: false,
+        timer: 1500,
+        width: 400,
+      });
     } catch (error) {
-      console.error("Error updating profile:", error);
-      alert("Gagal memperbarui profil");
+      console.error("Gagal memperbarui profil:", error);
     } finally {
       setSaving(false);
     }
@@ -312,7 +335,6 @@ function ProfileAdminPage() {
                   disabled={saving}
                   className="flex items-center space-x-2 bg-gray-400 hover:bg-gray-500 text-white px-4 py-2 rounded-lg transition-colors disabled:opacity-50 cursor-pointer"
                 >
-                  <X className="w-4 h-4" />
                   <span>Batal</span>
                 </button>
 
@@ -328,7 +350,6 @@ function ProfileAdminPage() {
                     </>
                   ) : (
                     <>
-                      <Save className="w-4 h-4" />
                       <span>Simpan Perubahan</span>
                     </>
                   )}

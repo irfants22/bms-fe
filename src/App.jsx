@@ -7,21 +7,21 @@ import LoginPage from "./pages/auth/LoginPage";
 import CartPage from "./pages/user/CartPage";
 import OrderPage from "./pages/user/OrderPage";
 import MyOrderPage from "./pages/user/MyOrderPage";
-import AboutUsPage from "./pages/user/AboutUs";
 import HelpPage from "./pages/user/HelpPage";
 import RegisterPage from "./pages/auth/RegisterPage";
 import DashboardAdminPage from "./pages/admin/DashboardAdminPage";
 import ManageProductPage from "./pages/admin/ManageProductPage";
 import ManageOrderPage from "./pages/admin/ManageOrderPage";
 import ManageUserPage from "./pages/admin/ManageUserPage";
-import OrderDetailAdmin from "./pages/admin/OrderDetailAdmin";
 import AdminLayout from "./layouts/AdminLayout";
-import OrderDetailUser from "./pages/user/OrderDetailUser";
 import AuthLayout from "./layouts/AuthLayout";
 import UserLayout from "./layouts/UserLayout";
 import ProfileAdminPage from "./pages/admin/ProfileAdminPage";
 import ProfileUserPage from "./pages/user/ProfileUserPage";
 import NotFoundPage from "./pages/notfound/NotFoundPage";
+import AboutUsPage from "./pages/user/AboutUsPage";
+import OrderDetailUserPage from "./pages/user/OrderDetailUserPage";
+import OrderDetailAdminPage from "./pages/admin/OrderDetailAdminPage";
 
 function App() {
   return (
@@ -37,11 +37,11 @@ function App() {
           <Route path="order" element={<OrderPage />} />
           <Route path="my-order" element={<MyOrderPage />} />
           <Route
-            path="/my-order/order/:orderId"
-            element={<OrderDetailUser />}
+            path="my-order/order/:orderId"
+            element={<OrderDetailUserPage />}
           />
-          <Route path="/about-us" element={<AboutUsPage />} />
-          <Route path="/help" element={<HelpPage />} />
+          <Route path="about-us" element={<AboutUsPage />} />
+          <Route path="help" element={<HelpPage />} />
         </Route>
 
         {/* Auth */}
@@ -59,7 +59,7 @@ function App() {
           <Route path="manage-users" element={<ManageUserPage />} />
           <Route
             path="manage-orders/order/:orderId"
-            element={<OrderDetailAdmin />}
+            element={<OrderDetailAdminPage />}
           />
         </Route>
 

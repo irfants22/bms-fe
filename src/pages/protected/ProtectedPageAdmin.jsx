@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { getRole, getToken } from "../../utils/helper";
+import Swal from "sweetalert2";
 
 function ProtectedPageAdmin({ children }) {
   const role = getRole();
@@ -12,7 +13,15 @@ function ProtectedPageAdmin({ children }) {
     if (!token) {
       navigate("/auth/login");
       setTimeout(() => {
-        alert("Anda harus login terlebih dahulu.");
+        Swal.fire({
+          position: "top",
+          icon: "warning",
+          title: "Peringatan!",
+          text: "Anda harus login terlebih dahulu.",
+          showConfirmButton: false,
+          timer: 1500,
+          width: 400,
+        });
       }, 100);
     } else {
       setCheckingAuth(false);
@@ -21,7 +30,15 @@ function ProtectedPageAdmin({ children }) {
     if (role !== "true") {
       navigate("/auth/login");
       setTimeout(() => {
-        alert("Anda tidak memiliki akses pada halaman yang dituju.");
+        Swal.fire({
+          position: "top",
+          icon: "warning",
+          title: "Peringatan!",
+          text: "Anda tidak memiliki akses pada halaman yang dituju.",
+          showConfirmButton: false,
+          timer: 1500,
+          width: 400,
+        });
       }, 100);
     } else {
       setCheckingAuth(false);
