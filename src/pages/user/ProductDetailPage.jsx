@@ -85,7 +85,6 @@ function ProductDetailPage() {
         timer: 1500,
         width: 400,
       });
-      navigate("/cart");
     } catch (error) {
       console.error("Gagal menambahkan produk ke keranjang:", error);
     }
